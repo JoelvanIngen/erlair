@@ -5,7 +5,7 @@ main([Filename, IncludeDir]) ->
 
     case epp:parse_file(Filename, Options) of
         {ok, Forms} ->
-            io:format("~p~n", [Forms]);
+            io:format("~0p~n", [Forms]);
         {error, Error} ->
             io:format(standard_error, "Error parsing file: ~p~n", [Error]),
             halt(1)
