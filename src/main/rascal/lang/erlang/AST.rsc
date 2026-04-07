@@ -42,17 +42,17 @@ data RecordField
 
 // Constants
 data Literal
-    = atom(int line, str \value)
-    | char(int line, str \value)
-    | float(int line, str \value)
-    | integer(int line, str \value)
-    | string(int line, str \value)
+    = atom(int line, str str_value)
+    | char(int line, str str_value)
+    | float(int line, str str_value)
+    | integer(int line, int int_value)
+    | string(int line, str str_value)
     ;
 
 // Pattern matching/LHS
 data Pattern
     = literal(Literal lit)
-    | bitstring(int line, list[BinaryElement] elements)
+    | bitstring(int line, list[BinaryElement] binElements)
     | match(int line, Pattern lhs, Pattern rhs)  // lhs = rhs
     | cons(int line, Pattern head, Pattern tail)  // [h | t]
     | \map(int line, list[Association] associations)  // #{K: V}
@@ -69,7 +69,7 @@ data Pattern
 data Expression
     = literal(Literal lit)
     | bc(int line, Expression template, list[Qualifier] qualifiers)
-    | bin(int line, list[BinaryElement] elements)
+    | bin(int line, list[BinaryElement] binElements)
     | block(int line, Body body)
     | \case(int line, Expression expr, list[Clause] clauses)
     | \catch(int line, Expression expr)
@@ -79,7 +79,7 @@ data Expression
     | fun(int line, list[Clause] clauses)
     | namedFun(int line, str name, list[Clause] clauses)
     | call(int line, Expression fun, list[Expression] args)
-    | call(int line, Expression \module, Expression fun, list[Expression] args)  // Remote
+    | call(int line, str \module, Expression fun, list[Expression] args)  // Remote
     | \if(int line, list[Clause] clauses)
     | lc(int line, Expression expr, list[Qualifier] qualifiers)
     | mc(int line, Association association, list[Qualifier] qualifiers)
@@ -112,8 +112,8 @@ data Qualifier
     | generateStrict(int line, Pattern pattern, Expression expr)  // P <:- E
     | bGenerate(int line, Pattern pattern, Expression expr)  // P <= E
     | bGenerateStrict(int line, Pattern pattern, Expression expr)  // P <:= E
-    | mGenerate(int line, Association pattern, Expression expr)  // P <- E with P_1 := P_2
-    | mGenerateStrict(int line, Association pattern, Expression expr)  // P <:- E with P_1 := P_2
+    | mGenerate(int line, Association association, Expression expr)  // P <- E with P_1 := P_2
+    | mGenerateStrict(int line, Association association, Expression expr)  // P <:- E with P_1 := P_2
     ;
 
 // Bitstring segments
@@ -144,7 +144,7 @@ data Type
     | binary(int line, Type m, Type n)  // <<_:M,_:_*N>>
     | nil(int line)  // '[]'
     | fun(int line)
-    | fun(int line, Type args, Type returnType)
+    | fun(int line, list[Type] args, Type returnType)
     | \any(int line)
     | range(int line, Type low, Type high)
     | \mapAny(int line)  // map/0
@@ -153,7 +153,7 @@ data Type
     | op(int line, str operator, Type operand)  // Monop
     | predefinedType(int line, str name, list[Type] args)
     | record(int line, list[Type] fields)
-    | remoteType(int line, Type \module, Type name, list[Type] args)
+    | remoteType(int line, Type \module, str name, list[Type] args)
     | \tupleAny(int line)  // tuple/0
     | \tuple(int line, list[Type] elements)  // {T_1, ..., T_k}
     | union(int line, list[Type] types)  // T_1 | ... | T_k
