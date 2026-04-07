@@ -110,7 +110,6 @@ Expression parseExpr([str t, value annot, value v])
 // recordUpdate(int line, Expression expr, str name, list[RecordFieldExpr] fields)
 // \tuple(int line, list[Expression] elements)
 // \try(int line, Body body, list[Clause] caseClauses, list[Clause] catchClauses, Body afterBody)  // caseClauses, catchClauses, afterBody can be '[]'
-// var(int line, str name)
 Expression parseExpr(["var", value annot, str name])
     = Expression::var(parseAnno(annot), name);
 default Expression parseExpr(value v) = unrecognised(#Expression, "Expression", v);
