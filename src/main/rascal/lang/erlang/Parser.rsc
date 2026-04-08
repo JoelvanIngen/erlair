@@ -55,8 +55,8 @@ Literal parseLiteral(["float", value annot, str v])
     = float(parseAnno(annot), v);
 Literal parseLiteral(["integer", value annot, int v])
     = integer(parseAnno(annot), v);
-// Literal parseLiteral(["string", value annot, list[value] vs])
-//     = string(parseAnno(annot), intercalate("", [parseLiteral(v) | v <- vs]));  // Parse chars
+Literal parseLiteral(["string", value annot, list[value] vs])
+    = string(parseAnno(annot), intercalate("", [parseLiteral(v) | v <- vs]));  // Parse chars
 default Literal parseLiteral(value v) = unrecognised(#Literal, "Literal", v);
 
 // literal(Literal lit)
