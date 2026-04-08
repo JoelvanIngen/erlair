@@ -100,7 +100,9 @@ Expression parseExpr([str t, value annot, value v])
 // maybe(int line, Body body)
 // maybe(int line, Body body, list[Clause] elseClauses)
 // nil(int line)  // []
-// op(int line, str operator, Expression lhs, Expression rhs)  // Binop, does not include '='
+Expression parseExpr(["op", value annot, str operator, list[value] lhs, list[value] rhs])
+    = op(parseAnno(annot), operator, parseExpr(lhs), parseExpr(rhs))
+    when operator != "=";  // Might be redundant but including for now just in case
 // op(int line, str operator, Expression operand)  // Monop
 // receive(int line, list[Clause] clauses)
 // receive(int line, list[Clause] clauses, Expression timeoutExpr, Body timeoutBody)
