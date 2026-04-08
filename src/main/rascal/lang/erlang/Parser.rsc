@@ -28,7 +28,7 @@ Form parseForm(["attribute", value annot, "file", [str path, int fileLine]])
     = fileAttr(parseAnno(annot), path, fileLine);
 Form parseForm(["function", value annot, str name, int arity, list[value] clauses])
     = functionDecl(parseAnno(annot), name, arity, [parseClause(c) | c <- clauses]);
-// functionSpec
+// functionSpec(int line, str name, int arity, list[Type] signatures)  // -Spec Name Ft_1; ...; Ft_k
 // functionSpec(int line, str \module, str name, int arity, list[Type] signatures)  // -spec Mod:Name Ft_1; ...; Ft_k
 // callbackSpec(int line, str name, int arity, list[Type] signatures)
 // callbackSpec(int line, str \module, str name, int arity, list[Type] signatures)
@@ -74,7 +74,6 @@ Pattern parsePattern(["var", value annot, str name])
     = Pattern::var(parseAnno(annot), name);
 default Pattern parsePattern(value v) = unrecognised(#Pattern, "Pattern", v);
 
-// literal(Literal lit)
 Expression parseExpr([str t, value annot, value v])
     = Expression::literal(parseLiteral([t, annot, v]))
     when t in LITERAL_TAGS;
