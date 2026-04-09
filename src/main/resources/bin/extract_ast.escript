@@ -35,7 +35,6 @@ to_json_array(List) ->
     "[" ++ string:join([to_json(E) || E <- List], ",") ++ "]".
 
 % Distinguish between Erlang strings and literal strings
-is_string([]) -> true;
 is_string([H|_] = List) when is_integer(H) ->
     io_lib:printable_list(List);
 is_string(_) -> 
