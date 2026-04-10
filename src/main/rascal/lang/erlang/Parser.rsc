@@ -11,7 +11,6 @@ EAF parseErlangAST(str rawJSON) {
 }
 
 // TODO: Check with Damian if this construct is possible without the ugly type hack
-// &T unrecognised(type[&T] _, str t, value v) { throw "Unrecognised <t>: <v>"; }
 &T unrecognised(type[&T] t, value v) { throw "Unrecognised <t>: <v>"; }
 
 // Extracting this in case annotations can be extended with columnn data in the future
