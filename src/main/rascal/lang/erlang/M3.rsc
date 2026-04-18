@@ -10,6 +10,8 @@ data M3(
     rel[loc caller, loc callee] functionCalls = {}
 );
 
+data Language = erlang(str version = "");
+
 data Modifier
     = \public()
     | \private()
@@ -28,7 +30,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
 
     M3 model = m3(fileLoc);
 
-    // TODO: Set language properties?
+    model.languages = { erlang() };
 
     str currentModName = "unknown";
     loc currentModule = |erlang+module:///unknown|;
