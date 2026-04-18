@@ -26,8 +26,6 @@ loc annoToLoc(loc fileLoc, Annotation \anno) {
 }
 
 M3 extractErlangM3(loc fileLoc, EAF ast) {
-    // TODO: Check if state is properly modified (not leaking) when traversing from and to functions
-
     M3 model = m3(fileLoc);
 
     model.languages = { erlang() };
