@@ -38,6 +38,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     for (Form f <- ast) {
         switch (f) {
             // Module definitions
+            // TODO: move to even higher priority in case -module is used not at the top of the file?
             case moduleAttr(Annotation a, str name): {
                 currentModName = name;
                 currentModule = |erlang+module:///<name>|;
