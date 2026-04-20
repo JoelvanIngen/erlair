@@ -61,7 +61,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 loc recLoc = |erlang+record:///<currentModName>/<name>|;
                 loc physLoc = annoToLoc(fileLoc, a);
 
-                model.declarations += {<currentFunction, recLoc>};
+                model.declarations += {<recLoc, physLoc>};
                 model.containment += {<currentModule, recLoc>};
                 model.names += {<name, physLoc>};
             }
