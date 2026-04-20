@@ -17,6 +17,11 @@ data Modifier
     | \private()
     ;
 
+data TypeSymbol
+    = erlangType(Type \type, list[Type] vars)
+    | erlangSpec(list[Type] signatures)
+    ;
+
 loc annoToLoc(loc fileLoc, Annotation \anno) {
     switch (\anno) {
         case \anno(int l): return fileLoc(0, 0, <l, 0>, <l, 0>);
@@ -64,6 +69,40 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.declarations += {<recLoc, physLoc>};
                 model.containment += {<currentModule, recLoc>};
                 model.names += {<name, physLoc>};
+            }
+
+            // (-type) type definitions
+            case typeDecl(Annotation a, str name, Type \type, list[Type] vars): {
+                loc typeLoc = |erlang+type:///<currentModName>/<name>/<toString(size(vars))>|;
+                loc physLoc = annoToLoc(fileLoc, a);
+
+                model.declarations += {<typeLoc, physLoc>};
+                model.containment += {<currentModule, typeLoc>};
+                model.names += {<name, physLoc>};
+                model.types += {<typeLoc, \erlangType(\type, vars)>};
+            }
+
+            // (-opaque) type definitions
+            case opaqueDecl(Annotation a, str name, Type \type, list[Type] vars): {
+                loc typeLoc = |erlang+type:///<currentModName>/<name>/<toString(size(vars))>|;
+                loc physLoc = annoToLoc(fileLoc, a);
+
+                model.declarations += {<typeLoc, physLoc>};
+                model.containment += {<currentModule, typeLoc>};
+                model.names += {<name, physLoc>};
+                model.types += {<typeLoc, \erlangType(\type, vars)>};
+            }
+
+            // (-spec) function
+            case functionSpec(Annotation a, str name, int arity, list[Type] signatures): {
+                loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
+                model.types += {<funcLoc, \erlangSpec(signatures)>};
+            }
+
+            // (-spec Mod:Name) remote function
+            case functionSpec(Annotation a, str modName, str name, int arity, list[Type] signatures): {
+                loc funcLoc = |erlang+function:///<modName>/<name>/<toString(arity)>|;
+                model.types += {<funcLoc, \erlangSpec(signatures)>};
             }
         }
     }
