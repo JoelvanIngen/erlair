@@ -111,6 +111,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     void visitNode(node n, loc currentFunction)
         = visitNode([n], currentFunction);
     void visitNode(list[node] n, loc currentFunction) {
+
+        // TODO: Also call this function for anonymous functions
+        
         // We visit root first such that we have the correct function information for subnodes
         top-down visit(n) {
             // Functions
