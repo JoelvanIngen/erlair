@@ -108,9 +108,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     }
 
     // Separate fn to avoid scope leaks
-    void visitNode(node n, loc currentFunction)
-        = visitNode([n], currentFunction);
-    void visitNode(list[node] n, loc currentFunction) {
+    void visitNode(node n, loc currentFunction, loc currentScope)
+        = visitNode([n], currentFunction, currentScope);
+    void visitNode(list[node] n, loc currentFunction, loc currentScope) {
 
         // TODO: Also call this function for anonymous functions
         
@@ -131,8 +131,11 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 }
 
                 // Visit children
+                int clauseIdx = 0;
                 for (Clause c <- clauses) {
-                    visitNode(c, funcLoc);
+                    loc clauseScope = funcLoc[path="<funcLoc.path>/clause_<clauseIdx>"];
+                    visitNode(c, funcLoc, clauseScope);
+                    clauseIdx += 1;
                 }
 
                 // Don't re-visit clauses
@@ -183,7 +186,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             // Variables
             case Pattern p: {
                 if (Pattern::var(Annotation a, str name) := p && name != "_") {
-                    loc varLoc = currentFunction[scheme="erlang+variable"][path="<currentFunction.path>/<name>"];
+                    loc varLoc = currentScope[scheme="erlang+variable"][path="<currentScope.path>/<name>"];
                     loc physLoc = annoToLoc(fileLoc, a);
                     model.declarations += {<varLoc, physLoc>};
                     model.containment += {<currentFunction, varLoc>};
@@ -191,7 +194,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             }
             case Expression e: {
                 if (Expression::var(Annotation a, str name) := e && name != "_") {
-                    loc varLoc = currentFunction[scheme="erlang+variable"][path="<currentFunction.path>/<name>"];
+                    loc varLoc = currentScope[scheme="erlang+variable"][path="<currentScope.path>/<name>"];
                     loc physLoc = annoToLoc(fileLoc, a);
                     model.uses += {<physLoc, varLoc>};
                 }
@@ -199,7 +202,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         }
     }
 
-    visitNode(ast, |unknown:///|);
+    visitNode(ast, |unknown:///|, |unknown:///|);
 
     return model;
 }
