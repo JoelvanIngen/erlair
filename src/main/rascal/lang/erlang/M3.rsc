@@ -1,6 +1,7 @@
 module lang::erlang::M3
 
 extend analysis::m3::Core;  // "extend" is is what clair does, I don't know why
+extend analysis::m3::TypeSymbol;
 
 import List;
 import util::Math;
@@ -18,8 +19,7 @@ data Modifier
     ;
 
 data TypeSymbol
-    = erlangType(Type \type, list[Type] vars)
-    | erlangSpec(list[Type] signatures)
+    = erlangType(Type astType)
     ;
 
 loc annoToLoc(loc fileLoc, Annotation \anno) {
@@ -79,7 +79,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.declarations += {<typeLoc, physLoc>};
                 model.containment += {<currentModule, typeLoc>};
                 model.names += {<name, physLoc>};
-                model.types += {<typeLoc, \erlangType(\type, vars)>};
+                model.types += {<typeLoc, erlangType(\type)>};
             }
 
             // (-opaque) type definitions
@@ -90,19 +90,25 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.declarations += {<typeLoc, physLoc>};
                 model.containment += {<currentModule, typeLoc>};
                 model.names += {<name, physLoc>};
-                model.types += {<typeLoc, \erlangType(\type, vars)>};
+                model.types += {<typeLoc, erlangType(\type)>};
             }
 
             // (-spec) function
             case functionSpec(Annotation a, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
-                model.types += {<funcLoc, \erlangSpec(signatures)>};
+                model.types += {<funcLoc, erlangType(s)> | s <- signatures};
             }
 
             // (-spec Mod:Name) remote function
             case functionSpec(Annotation a, str modName, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<modName>/<name>/<toString(arity)>|;
-                model.types += {<funcLoc, \erlangSpec(signatures)>};
+                model.types += {<funcLoc, erlangType(s)> | s <- signatures};
+            }
+
+            // (-callback) callback spec
+            case callbackSpec(Annotation a, str name, int arity, list[Type] signatures): {
+                loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
+                model.types += {<funcLoc, erlangType(s)> | s <- signatures};
             }
         }
     }
