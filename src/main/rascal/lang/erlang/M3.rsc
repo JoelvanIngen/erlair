@@ -7,6 +7,9 @@ import List;
 import util::Math;
 import lang::erlang::AST;
 
+// Used to keep track of visible variables in nested scopes
+private alias Env = map[str, loc];
+
 data M3(
     rel[loc caller, loc callee] functionCalls = {}
 );
@@ -37,7 +40,6 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
 
     str currentModName = "unknown";
     loc currentModule = |erlang+module:///unknown|;
-    loc currentFunction = |unknown:///|;
 
     // Pre-process exports etc to ensure they're marked as public before big traversal
     for (Form f <- ast) {
@@ -54,7 +56,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             }
 
             // Exports
-            case exportAttr(Annotation a, list[tuple[str name, int arity]] exports): {
+            case exportAttr(_, list[tuple[str name, int arity]] exports): {
                 for (<str funcName, int arity> <- exports) {
                     loc funcLoc = |erlang+function:///<currentModName>/<funcName>/<toString(arity)>|;
                     model.modifiers += {<funcLoc, \public()>};
@@ -94,121 +96,244 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             }
 
             // (-spec) function
-            case functionSpec(Annotation a, str name, int arity, list[Type] signatures): {
+            case functionSpec(_, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
             }
 
             // (-spec Mod:Name) remote function
-            case functionSpec(Annotation a, str modName, str name, int arity, list[Type] signatures): {
+            case functionSpec(_, str modName, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<modName>/<name>/<toString(arity)>|;
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
             }
 
             // (-callback) callback spec
-            case callbackSpec(Annotation a, str name, int arity, list[Type] signatures): {
+            case callbackSpec(_, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
             }
         }
     }
 
-    // Separate fn to avoid scope leaks
-    void visitNode(node n, loc currentFunction, loc currentScope)
-        = visitNode([n], currentFunction, currentScope);
-    void visitNode(list[node] n, loc currentFunction, loc currentScope) {
+    // To ensure unique identifiers for all anonymous scopes
+    int scopeIdCounter = 0;
 
-        // TODO: Also call this function for anonymous functions
-        
+    str getNextScopeId(str prefix) {
+        scopeIdCounter += 1;
+        return "<prefix>_<scopeIdCounter>";
+    }
+
+    // `value` for n should be `node` or `list[node]`
+    // TODO: Find out of we can define type unions in Rascal
+    Env analyseScope(value n, loc scopeLoc, Env startingEnv) {
+        Env currentEnv = startingEnv;
+
         // We visit root first such that we have the correct function information for subnodes
         top-down visit(n) {
-            // Functions
-            case functionDecl(Annotation a, str name, int arity, list[Clause] clauses): {
-                loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
-                loc physLoc = annoToLoc(fileLoc, a);
-                
-                model.declarations += {<funcLoc, physLoc>};
-                model.containment += {<currentModule, funcLoc>};
-                model.names += {<name, physLoc>};
-                
-                // If not already flagged public: is private
-                if (<funcLoc, \public()> notin model.modifiers) {
-                    model.modifiers += {<funcLoc, \private()>};
-                }
+            // Function clauses
+            case clause(_, list[Pattern] patterns, GuardSeq guards, Body body): {
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("clause")>"];
+                innerEnv = currentEnv;
+                innerEnv = analyseScope(patterns, innerScope, innerEnv);
+                innerEnv = analyseScope(guards, innerScope, innerEnv);
+                analyseScope(body, innerScope, innerEnv);
 
-                // Visit children
-                int clauseIdx = 0;
-                for (Clause c <- clauses) {
-                    loc clauseScope = funcLoc[path="<funcLoc.path>/clause_<clauseIdx>"];
-                    visitNode(c, funcLoc, clauseScope);
-                    clauseIdx += 1;
-                }
-
-                // Don't re-visit clauses
                 fail;
             }
 
+            // Anonymous functions
+            case fun(_, list[Clause] clauses): {
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("fun")>"];
+                for (Clause c <- clauses) {
+                    analyseScope(c, innerScope, currentEnv);
+                }
+                fail;
+            }
+            case namedFun(Annotation a, str name, list[Clause] clauses): {
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("named_fun")>"];
+
+                loc nameLoc = innerScope[scheme="erlang+variable"][path="<innerScope.path>/<name>"];
+                loc physLoc = annoToLoc(fileLoc, a);
+                model.declarations += {<nameLoc, physLoc>};
+
+                // Add function name to its own scope
+                funEnv = currentEnv + (name : nameLoc);
+                for (Clause c <- clauses) {
+                    analyseScope(c, innerScope, funEnv);
+                }
+                fail;
+            }
+
+            // Comprehensions
+            case lc(_, Expression expr, list[Qualifier] qualifiers): {
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("lc")>"];
+                innerEnv = currentEnv;
+                innerEnv = analyseScope(qualifiers, innerScope, innerEnv);
+                analyseScope(expr, innerScope, innerEnv);
+                fail;
+            }
+            case bc(_, Expression template, list[Qualifier] qualifiers): {
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("bc")>"];
+                innerEnv = currentEnv;
+                innerEnv = analyseScope(qualifiers, innerScope, innerEnv);
+                analyseScope(template, innerScope, innerEnv);
+                fail;
+            }
+            case mc(_, Association association, list[Qualifier] qualifiers): {
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("mc")>"];
+                innerEnv = currentEnv;
+                innerEnv = analyseScope(qualifiers, innerScope, innerEnv);
+                analyseScope(association, innerScope, innerEnv);
+                fail;
+            }
+
+            // Match evaluates RHS first, then binds LHS
+            case match(_, Pattern pat, Expression expr): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                fail;
+            }
+            case maybeMatch(_, Pattern pat, Expression expr): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                fail;
+            }
+
+            // Maybe has its own scope
+            case maybe(_, Body body): {
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("maybe")>"];
+                analyseScope(body, innerScope, currentEnv);
+                fail;
+            }
+            case maybe(_, Body body, _, list[Clause] elseClauses): {
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("maybe")>"];
+                analyseScope(body, innerScope, currentEnv);
+                for (c <- elseClauses)
+                    analyseScope(c, innerScope, currentEnv);
+                fail;
+            }
+            
+            // Generators P <- E evaluate E first, then bind P
+            case generate(_, Pattern pat, Expression expr): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                fail;
+            }
+            case generateStrict(_, Pattern pat, Expression expr): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                fail;
+            }
+            case bGenerate(_, Pattern pat, Expression expr): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                fail;
+            }
+            case bGenerateStrict(_, Pattern pat, Expression expr): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                fail;
+            }
+            case mGenerate(_, Association association, Expression expr): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                currentEnv = analyseScope(association, scopeLoc, currentEnv);
+                fail;
+            }
+            case mGenerateStrict(_, Association association, Expression expr): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                currentEnv = analyseScope(association, scopeLoc, currentEnv);
+                fail;
+            }
+
+            // Vars
+            case Pattern::var(Annotation a, str name): {
+                // TODO: Also ignore anything starting with '_'?
+                if (name != "_") {
+                    if (name notin currentEnv) {
+                        // Declaration
+                        loc varLoc = scopeLoc[scheme="erlang+variable"][path="<scopeLoc.path>/<name>"];
+                        loc physLoc = annoToLoc(fileLoc, a);
+
+                        model.declarations += {<varLoc, physLoc>};
+                        model.containment += {<scopeLoc, varLoc>};
+                        
+                        currentEnv[name] = varLoc;
+                    } else {
+                        // Use
+                        loc physLoc = annoToLoc(fileLoc, a);
+                        model.uses += {<physLoc, currentEnv[name]>};
+                    }
+                }
+            }
+            case Expression::var(Annotation a, str name): {
+                if (name != "_") {
+                    if (name in currentEnv) {
+                        loc physLoc = annoToLoc(fileLoc, a);
+                        model.uses += {<physLoc, currentEnv[name]>};
+                    } else {
+                        // If this occurs, it is probably very bad
+                        loc varLoc = scopeLoc[scheme="erlang+variable"][path="<scopeLoc.path>/<name>"];
+                        loc physLoc = annoToLoc(fileLoc, a);
+                        model.uses += {<physLoc, varLoc>};
+                    }
+                }
+            }
+
             // Local funcall
-            case e:Expression::call(Annotation a, Expression funExpr, list[Expression] args): {
+            case Expression::call(Annotation a, Expression funExpr, list[Expression] args): {
                 if (Expression::literal(atom(_, str funName)) := funExpr ||
                     Expression::var(_, str funName) := funExpr) {
-                        
+
                     int arity = size(args);
                     loc callee = |erlang+function:///<currentModName>/<funName>/<toString(arity)>|;
                     loc physLoc = annoToLoc(fileLoc, a);
-                    
+
                     model.uses += {<physLoc, callee>};
-                    
-                    if (currentFunction.scheme != "unknown") {
-                        model.functionCalls += {<currentFunction, callee>};
+                    if (scopeLoc.scheme != "unknown") {
+                        model.functionCalls += {<scopeLoc, callee>};
                     }
-                } else {
-                    iprintln(e);
-                    throw "Unexpected funExpr <funExpr> for call <e>";
                 }
             }
 
             // Remote funcall
             case Expression::call(Annotation a, Expression modExpr, Expression funExpr, list[Expression] args): {
-                if (Expression::literal(atom(_, str targetMod)) := modExpr, 
+                if (Expression::literal(atom(_, str targetMod)) := modExpr,
                     Expression::literal(atom(_, str funName)) := funExpr) {
-                    
-                    // Static call
+
                     int arity = size(args);
                     loc callee = |erlang+function:///<targetMod>/<funName>/<toString(arity)>|;
                     loc physLoc = annoToLoc(fileLoc, a);
                     
                     model.uses += {<physLoc, callee>};
-                    if (currentFunction.scheme != "unknown") {
-                        model.functionCalls += {<currentFunction, callee>};
+                    if (scopeLoc.scheme != "unknown") {
+                        model.functionCalls += {<scopeLoc, callee>};
                     }
                 } else {
-                    // Dynamic call (fun/mod as expression)
                     loc physLoc = annoToLoc(fileLoc, a);
                     model.uses += {<physLoc, |unresolved:///dynamic_call|>};
                 }
             }
-
-            // Variables
-            case Pattern p: {
-                if (Pattern::var(Annotation a, str name) := p && name != "_") {
-                    loc varLoc = currentScope[scheme="erlang+variable"][path="<currentScope.path>/<name>"];
-                    loc physLoc = annoToLoc(fileLoc, a);
-                    model.declarations += {<varLoc, physLoc>};
-                    model.containment += {<currentFunction, varLoc>};
-                }
-            }
-            case Expression e: {
-                if (Expression::var(Annotation a, str name) := e && name != "_") {
-                    loc varLoc = currentScope[scheme="erlang+variable"][path="<currentScope.path>/<name>"];
-                    loc physLoc = annoToLoc(fileLoc, a);
-                    model.uses += {<physLoc, varLoc>};
-                }
-            }
         }
+
+        return currentEnv;
     }
 
-    visitNode(ast, |unknown:///|, |unknown:///|);
+    for (Form f <- ast) {
+        if (functionDecl(Annotation a, str name, int arity, list[Clause] clauses) := f) {
+            loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
+            loc physLoc = annoToLoc(fileLoc, a);
+            
+            model.declarations += {<funcLoc, physLoc>};
+            model.containment += {<|erlang+module:///<currentModName>|, funcLoc>};
+            model.names += {<name, physLoc>};
+            
+            if (<funcLoc, \public()> notin model.modifiers)
+                model.modifiers += {<funcLoc, \private()>};
+
+            for (Clause c <- clauses) 
+                analyseScope(c, funcLoc, ());
+        }
+    }
 
     return model;
 }
