@@ -1,7 +1,8 @@
 % Usage: escript extract_ast.escript <file.erl> <include_dir>
 
 main([Filename, IncludeDir]) ->
-    Options = [{includes, [IncludeDir]}],
+    Options = [{includes, [IncludeDir]},
+               {location, {1,1}}],
 
     case epp:parse_file(Filename, Options) of
         {ok, Forms} ->
