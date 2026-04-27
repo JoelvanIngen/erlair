@@ -82,7 +82,7 @@ data Expression
     | funDecl(Annotation \anno, Expression \module, Expression eName, Expression eArity)
     | fun(Annotation \anno, list[Clause] clauses)
     | namedFun(Annotation \anno, str name, list[Clause] clauses)
-    | call(Annotation \anno, Expression fun, list[Expression] args)
+    | call(Annotation \anno, Expression fun, list[Expression] args)  // Local
     | call(Annotation \anno, Expression \module, Expression fun, list[Expression] args)  // Remote
     | \if(Annotation \anno, list[Clause] clauses)
     | lc(Annotation \anno, Expression expr, list[Qualifier] qualifiers)

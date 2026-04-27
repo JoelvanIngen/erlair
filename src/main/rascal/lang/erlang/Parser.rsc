@@ -125,12 +125,11 @@ Expression parseExpr(["fun", value \anno, ["clauses", list[list[value]] clauses]
     = fun(parseAnno(\anno), [parseClause(c) | c <- clauses]);
 Expression parseExpr(["named_fun", value \anno, str name, list[list[value]] clauses])
     = namedFun(parseAnno(\anno), name, [parseClause(c) | c <- clauses]);
+// Remote call first for more specific match
+Expression parseExpr(["call", value \anno, ["remote", _, list[value] \module, list[value] fun], list[list[value]] args])
+    = call(parseAnno(\anno), parseExpr(\module), parseExpr(fun), [parseExpr(a) | a <- args]);
 Expression parseExpr(["call", value \anno, list[value] fun, list[list[value]] args])
     = call(parseAnno(\anno), parseExpr(fun), [parseExpr(a) | a <- args]);
-Expression parseExpr(["remote", value \anno, list[value] \module, list[value] fun, list[list[value]] args])
-    = call(parseAnno(\anno), parseExpr(\module), parseExpr(fun), [parseExpr(a) | a <- args]);
-Expression parseExpr(["remote", value \anno, list[value] \module, list[value] fun])
-    = call(parseAnno(\anno), parseExpr(\module), parseExpr(fun), []);
 Expression parseExpr(["if", value \anno, list[list[value]] clauses])
     = \if(parseAnno(\anno), [parseClause(c) | c <- clauses]);
 Expression parseExpr(["lc", value \anno, list[value] expr, list[list[value]] qualifiers])
