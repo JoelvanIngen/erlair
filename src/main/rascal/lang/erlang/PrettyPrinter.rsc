@@ -235,7 +235,7 @@ str showExprNoParens(maybeMatch(_, pat, rhs)) = "<pPattern(pat)> ?= <pExpr(rhs, 
 str showExprNoParens(maybe(_, body)) = "maybe\n" + showBody(body) + "\nend";
 str showExprNoParens(maybe(_, body, _, elseCls)) = "maybe\n" + showBody(body) + "\nelse\n" + j(";\n", [showClause("", c, false) | c <- elseCls]) + "\nend";
 str showExprNoParens(e:Expression::op(_, operator, lhs, rhs)) =  // Binary
-    "<pExpr(lhs, exprPrec(e))> <op> <pExpr(rhs, exprPrec(e))>"
+    "<pExpr(lhs, exprPrec(e))> <operator> <pExpr(rhs, exprPrec(e))>"
     when operator != "=";
 str showExprNoParens(Expression::op(_, operator, operand)) =  // Unary
     operator == "+" || operator == "-" ? "<operator><pExpr(operand, precUnary-1)>" : "<operator> <pExpr(operand, precUnary-1)>";
