@@ -76,7 +76,7 @@ str pForm(moduleAttr(_, str name))
 str pForm(fileAttr(_, str path, int line))
     = "-file(<path>, <line>).";
 str pForm(functionDecl(_, str name, int arity, list[Clause] clauses))
-    = "<j("; ", [showClause(name, c, true) | c <- clauses])>";
+    = "<j("; ", [showClause(name, c, true) | c <- clauses])>.";
 str pForm(functionSpec(_, str name, int arity, list[Type] signatures))
     = "spec <name><pFunSig(signatures)>.";
 str pForm(functionSpec(_, str \module, str name, int arity, list[Type] signatures))
