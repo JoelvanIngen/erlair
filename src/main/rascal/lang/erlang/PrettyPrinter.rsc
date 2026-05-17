@@ -74,7 +74,7 @@ str pForm(importAttr(_, str \module, list[tuple[str name, int arity]] imports))
 str pForm(moduleAttr(_, str name))
     = "-module(<name>).";
 str pForm(fileAttr(_, str path, int line))
-    = "-file(<path>, <line>).";
+    = "-file(\"<escapeString(path)>\", <line>).";
 str pForm(functionDecl(_, str name, int arity, list[Clause] clauses))
     = "<j("; ", [showClause(name, c, true) | c <- clauses])>.";
 str pForm(functionSpec(_, str name, int arity, list[Type] signatures))
