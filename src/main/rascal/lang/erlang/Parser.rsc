@@ -1,5 +1,6 @@
 module lang::erlang::Parser
 
+import IO;
 import lang::erlang::AST;
 import lang::erlang::ErlangImporter;
 
@@ -41,8 +42,12 @@ Form parseForm(["attribute", value \anno, "type", [str name, list[value] \type, 
     = typeDecl(parseAnno(\anno), name, parseType(\type), [parseType(v) | v <- vars]);
 Form parseForm(["attribute", value \anno, "opaque", [str name, list[value] \type, list[list[value]] vars]])
     = typeDecl(parseAnno(\anno), name, parseType(\type), [parseType(v) | v <- vars]);
-Form parseForm(["attribute", value \anno, str name, value \value])
-    = wildAttr(parseAnno(\anno), name, \value);
+Form parseForm(["attribute", value \anno, "doc", str text])
+    = docAttr(parseAnno(\anno), text);
+Form parseForm(["attribute", value \anno, "comment", str text])
+    = commentAttr(parseAnno(\anno), text);
+Form parseForm(["attribute", value \anno, str name, value text])
+    = wildAttr(parseAnno(\anno), name, text);
 Form parseForm(["error", value description])
     = error(description);
 Form parseForm(["warning", value description])

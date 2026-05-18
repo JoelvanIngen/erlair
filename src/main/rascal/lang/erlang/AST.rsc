@@ -30,6 +30,8 @@ data Form
     | recordDecl(Annotation \anno, str name, list[RecordField] fields)
     | typeDecl(Annotation \anno, str name, Type \type, list[Type] vars)
     | opaqueDecl(Annotation \anno, str name, Type \type, list[Type] vars)
+    | docAttr(Annotation \anno, str text)
+    | commentAttr(Annotation \anno, str text)
     | wildAttr(Annotation \anno, str name, value \value)
     | error(value description)
     | warning(value description)

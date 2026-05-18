@@ -52,10 +52,10 @@ str pTypeParams(list[Type] vars) {
     return "(" + j(", ", [pType(v) | v <- vars]) + ")";
 }
 
-str escapeString(str s) {
+str escapeString(str s, bool replaceNewlines=true) {
     s = replaceAll(s, "\\", "\\\\");
     s = replaceAll(s, "\"", "\\\"");
-    s = replaceAll(s, "\n", "\\n");
+    if (replaceNewlines) s = replaceAll(s, "\n", "\\n");
     s = replaceAll(s, "\r", "\\r");
     s = replaceAll(s, "\t", "\\t");
     return s;
@@ -65,6 +65,12 @@ str escapeAtom(str s) {
     s = replaceAll(s, "\\", "\\\\");
     s = replaceAll(s, "\'", "\\\'");
     return s;
+}
+
+str pMultiLineStr(str s) {
+    s = escapeString(s, replaceNewlines=false);
+    s = replaceAll(s, "\n", "\"\n\"");
+    return s;  // Corpus puts explicit verbatism \n after each line for some reason?
 }
 
 str pForm(exportAttr(_, list[tuple[str name, int arity]] exports))
@@ -89,6 +95,10 @@ str pForm(typeDecl(_, str name, Type \type, list[Type] vars))
     = "-type <name><pTypeParams(vars)> :: <pType(\type)>.";
 str pForm(opaqueDecl(_, str name, Type \type, list[Type] vars))
     = "-opaque <name><pTypeParams(vars)> :: <pType(\type)>.";
+str pForm(docAttr(_, str text))
+    = "-doc \"<pMultiLineStr(text)>\".";
+str pForm(commentAttr(_, str text))
+    = "-comment \"<pMultiLineStr(text)>\".";
 str pForm(wildAttr(_, str name, value \value))
     = "-<name>(<pWildAttrValue(\value)>).";
 // Keeping errors/warnings as comments for demonstration purposes
