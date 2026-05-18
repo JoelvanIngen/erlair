@@ -1,5 +1,6 @@
 module lang::erlang::PrettyPrinter
 
+import IO;
 import List;
 import String;
 import lang::erlang::AST;
