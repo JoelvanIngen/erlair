@@ -82,9 +82,9 @@ str pForm(fileAttr(_, str path, int line))
 str pForm(functionDecl(_, str name, int arity, list[Clause] clauses))
     = "<j("; ", [showClause(name, c, true) | c <- clauses])>.";
 str pForm(functionSpec(_, str name, int arity, list[Type] signatures))
-    = "spec <name><pFunSig(signatures)>.";
+    = "-spec <name><pFunSig(signatures)>.";
 str pForm(functionSpec(_, str \module, str name, int arity, list[Type] signatures))
-    = "spec <\module>:<name><pFunSig(signatures)>.";
+    = "-spec <\module>:<name><pFunSig(signatures)>.";
 str pForm(callbackSpec(_, str name, int arity, list[Type] signatures))
     = "-callback <name><pFunSig(signatures)>.";
 str pForm(recordDecl(_, str name, list[RecordField] fields))
