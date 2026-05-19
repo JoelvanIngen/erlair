@@ -47,10 +47,8 @@ str pNameArity(str name, int arity)
 str pFunSig(list[Type] signatures)
     = "(" + j("; ", [pType(t) | t <- signatures]) + ")";
 
-str pTypeParams(list[Type] vars) {
-    if (vars == []) return "";
-    return "(" + j(", ", [pType(v) | v <- vars]) + ")";
-}
+str pTypeParams(list[Type] vars)
+    = "(" + j(", ", [pType(v) | v <- vars]) + ")";
 
 str escapeString(str s, bool replaceNewlines=true) {
     s = replaceAll(s, "\\", "\\\\");
