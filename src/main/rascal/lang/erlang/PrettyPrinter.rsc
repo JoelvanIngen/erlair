@@ -327,6 +327,8 @@ str pType(\mapAny(_)) = "map()";
 str pType(Type::\map(_, assocs)) = "#{" + j(", ", [pType(a) | a <- assocs]) + "}";
 str pType(Type::op(_, operator, lhs, rhs)) = "<pType(lhs)> <operator> <pType(rhs)>";
 str pType(Type::op(_, operator, operand)) = "<operator> <pType(operand)>";
+str pType(predefinedType(_, "map_field_assoc", [k, v])) = "<pType(k)> =\> <pType(v)>";
+str pType(predefinedType(_, "map_field_exact", [k, v])) = "<pType(k)> := <pType(v)>";
 str pType(predefinedType(_, name, args)) = "<name>(" + j(", ", [pType(a) | a <- args]) + ")";
 str pType(record(_, [Type::literal(atom(_, str recName)), *fields])) = "#<recName>{" + j(", ", [pType(f) | f <- fields]) + "}";
 str pType(remoteType(_, \mod, name, args)) = "<pType(\mod)>:<pType(name)>(" + j(", ", [pType(a) | a <- args]) + ")";
