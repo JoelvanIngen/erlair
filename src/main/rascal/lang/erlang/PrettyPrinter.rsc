@@ -45,7 +45,14 @@ str pNameArity(str name, int arity)
     = "<name>/<arity>";
 
 str pFunSig(list[Type] signatures)
-    = "(" + j("; ", [pType(t) | t <- signatures]) + ")";
+    = j("; ", [pSpecSig(t) | t <- signatures]);
+
+str pSpecSig(boundedFun(_, Type \type, list[TypeConstraint] constraints))
+    = "<pSpecSig(\type)> when <j(", ", [pTypeConstraint(c) | c <- constraints])>";
+str pSpecSig(fun(_, args, ret))
+    = "(<j(", ", [pType(a) | a <- args])>) -\> <pType(ret)>";
+default str pSpecSig(Type t)
+    = pType(t);
 
 str pTypeParams(list[Type] vars)
     = "(" + j(", ", [pType(v) | v <- vars]) + ")";
