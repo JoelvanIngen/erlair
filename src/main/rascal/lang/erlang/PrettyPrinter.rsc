@@ -214,7 +214,7 @@ default int exprPrec(_)= precAtomic;  // Safe
 str showExprNoParens(Expression::literal(l)) = pLiteral(l);
 str showExprNoParens(Expression::var(_, name)) = name;
 str showExprNoParens(nil(_)) = "[]";
-str showExprNoParens(Expression::cons(_, head, tail)) = "[<pExpr(head, 0)> | <pExpr(tail, 0)>]";
+str showExprNoParens(Expression::cons(_, head, tail)) = pList(head, tail);
 str showExprNoParens(Expression::\tuple(_, els)) = "{" + j(", ", [pExpr(ex, 0) | ex <- els]) + "}";
 str showExprNoParens(bin(_, elems)) = "\<\<" + j(", ", [pBinaryElementExpr(ex) | ex <- elems]) + "\>\>";
 str showExprNoParens(Expression::\map(_, assocs)) = "#{" + j(", ", [pAssociation(a) | a <- assocs]) + "}";
@@ -256,6 +256,19 @@ str showExprNoParens(Expression::op(_, operator, operand)) =  // Unary
     operator == "+" || operator == "-" ? "<operator><pExpr(operand, precUnary-1)>" : "<operator> <pExpr(operand, precUnary-1)>";
 default str showExprNoParens(Expression e) {
     throw "PrettyPrinter: unexpected Expression <e>";
+}
+
+str pList(Expression head, Expression tail) {
+    list[str] elems = [pExpr(head, 0)];
+    Expression current = tail;
+    while (cons(_, h, t) := current) {
+        elems += pExpr(h, 0);
+        current = t;
+    }
+    if (nil(_) := current) {
+        return "[" + j(", ", elems) + "]";
+    }
+    return "[" + j(", ", elems) + " | " + pExpr(current, 0) + "]";
 }
 
 str showBody(Body b) {
