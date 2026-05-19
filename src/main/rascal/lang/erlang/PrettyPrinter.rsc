@@ -327,14 +327,14 @@ str pType(\mapAny(_)) = "map()";
 str pType(Type::\map(_, assocs)) = "#{" + j(", ", [pType(a) | a <- assocs]) + "}";
 str pType(Type::op(_, operator, lhs, rhs)) = "<pType(lhs)> <operator> <pType(rhs)>";
 str pType(Type::op(_, operator, operand)) = "<operator> <pType(operand)>";
-str pType(predefinedType(_, name, args)) = "<name>" + (args == [] ? "" : "(" + j(", ", [pType(a) | a <- args]) + ")");
+str pType(predefinedType(_, name, args)) = "<name>(" + j(", ", [pType(a) | a <- args]) + ")";
 str pType(record(_, fields)) = "#record{" + j(", ", [pType(f) | f <- fields]) + "}";
 str pType(remoteType(_, \mod, name, args)) = "<pType(\mod)>:<pType(name)>(" + j(", ", [pType(a) | a <- args]) + ")";
 str pType(\tupleAny(_)) = "tuple()";
 str pType(Type::\tuple(_, elems)) = "{" + j(", ", [pType(elem) | elem <- elems]) + "}";
 str pType(union(_, types)) = j(" | ", [pType(tp) | tp <- types]);
 str pType(Type::var(_, name)) = name;
-str pType(userType(_, name, args)) = "<name>" + (args == [] ? "" : "(" + j(", ", [pType(a) | a <- args]) + ")");
+str pType(userType(_, name, args)) = "<name>(" + j(", ", [pType(a) | a <- args]) + ")";
 
 str pBinaryElementPattern(binElementPatt(_, val, size, tspecs)) = "<pPattern(val)><pOptSize(size)><pOptTypeSpecs(tspecs)>";
 
