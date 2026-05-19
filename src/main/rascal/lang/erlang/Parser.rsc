@@ -30,11 +30,11 @@ Form parseForm(["attribute", value \anno, "file", [str path, int fileLine]])
     = fileAttr(parseAnno(\anno), path, fileLine);
 Form parseForm(["function", value \anno, str name, int arity, list[value] clauses])
     = functionDecl(parseAnno(\anno), name, arity, [parseClause(c) | c <- clauses]);
-Form parseForm(["attribute", value \anno, "spec", [str name, int arity], list[list[value]] signatures])
+Form parseForm(["attribute", value \anno, "spec", [[str name, int arity], list[list[value]] signatures]])
     = functionSpec(parseAnno(\anno), name, arity, [parseType(s) | s <- signatures]);
-Form parseForm(["attribute", value \anno, "spec", [str \module, str name, int arity], list[list[value]] signatures])
+Form parseForm(["attribute", value \anno, "spec", [[str \module, str name, int arity], list[list[value]] signatures]])
     = functionSpec(parseAnno(\anno), \module, name, arity, [parseType(s) | s <- signatures]);
-Form parseForm(["attribute", value \anno, "callback", [str name, int arity], list[list[value]] signatures])
+Form parseForm(["attribute", value \anno, "callback", [[str name, int arity], list[list[value]] signatures]])
     = callbackSpec(parseAnno(\anno), name, arity, [parseType(s) | s <- signatures]);
 Form parseForm(["attribute", value \anno, "record", [str name, list[list[value]] fields]])
     = recordDecl(parseAnno(\anno), name, [parseRecordField(f) | f <- fields]);
@@ -216,6 +216,8 @@ default Clause parseClause(value v) = unrecognised(#Clause, v);
 
 Type parseType(["ann_type", value \anno, [list[value] var, list[value] \type]])
     = annType(parseAnno(\anno), parseType(var), parseType(\type));
+Type parseType(["type", value \anno, "bounded_fun", [ [str t1, *v1], list[value] constraints ]])
+    = boundedFun(parseAnno(\anno), parseType([t1, *v1]), [parseTypeConstraint(c) | c <- constraints]);
 Type parseType([str t, value \anno, value v])
     = Type::literal(parseLiteral([t, \anno, v]))
     when t in LITERAL_TAGS;

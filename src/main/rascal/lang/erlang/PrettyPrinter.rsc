@@ -316,6 +316,8 @@ str showGuards(GuardSeq guards) {
 }
 
 str pType(annType(_, var, tp)) = "<pType(var)> :: <pType(tp)>";
+str pType(boundedFun(_, Type \type, list[TypeConstraint] constraints))
+    = "<pType(\type)> when <j(", ", [pTypeConstraint(c) | c <- constraints])>";
 str pType(Type::literal(l)) = pLiteral(l);
 str pType(binary(_, m, n)) {
     bool mZero = (Type::literal(integer(_, 0)) := m);
@@ -344,6 +346,12 @@ str pType(Type::\tuple(_, elems)) = "{" + j(", ", [pType(elem) | elem <- elems])
 str pType(union(_, types)) = j(" | ", [pType(tp) | tp <- types]);
 str pType(Type::var(_, name)) = name;
 str pType(userType(_, name, args)) = "<name>(" + j(", ", [pType(a) | a <- args]) + ")";
+
+str pTypeConstraint(constraint(_, str kind, Type var, Type \type)) {
+    // is_subtype: internal name for the '::' operator in specs
+    str op = (kind == "is_subtype") ? "::" : kind;
+    return "<pType(var)> <op> <pType(\type)>";
+}
 
 str pBinaryElementPattern(binElementPatt(_, val, size, tspecs)) = "<pPattern(val)><pOptSize(size)><pOptTypeSpecs(tspecs)>";
 
