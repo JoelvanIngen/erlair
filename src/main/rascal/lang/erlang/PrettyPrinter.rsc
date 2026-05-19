@@ -317,7 +317,14 @@ str showGuards(GuardSeq guards) {
 
 str pType(annType(_, var, tp)) = "<pType(var)> :: <pType(tp)>";
 str pType(Type::literal(l)) = pLiteral(l);
-str pType(binary(_, m, n)) = "\<\<_:<pType(m)>,_:_*<pType(n)>\>";
+str pType(binary(_, m, n)) {
+    bool mZero = (Type::literal(integer(_, 0)) := m);
+    bool nZero = (Type::literal(integer(_, 0)) := n);
+    if (mZero && nZero) return "\<\<\>\>";
+    if (nZero) return "\<\<_:<pType(m)>\>\>";
+    if (mZero) return "\<\<_:_*<pType(n)>\>\>";
+    return "\<\<_:<pType(m)>, _:_*<pType(n)>\>\>";
+}
 str pType(nil(_)) = "[]";
 str pType(fun(_)) = "fun()";
 str pType(fun(_, args, ret)) = "fun((<j(", ", [pType(a) | a <- args])>) -\> <pType(ret)>)";
