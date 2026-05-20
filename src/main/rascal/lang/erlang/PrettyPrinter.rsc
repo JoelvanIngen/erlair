@@ -389,4 +389,12 @@ str pTypeSpec(typeSpec(name, val)) = "<name>-<val>";
 str pRecordFieldExpr(recordFieldExpr(_, field, val)) = "<pExpr(field, 0)> = <pExpr(val, 0)>";
 
 // Print raw json for now
+str pWildAttrValue(str s) = pAtom(s);
+str pWildAttrValue(int i) = "<i>";
+str pWildAttrValue(real r) = "<r>";
+str pWildAttrValue(list[value] l) {
+    // [Name, Arity] handling
+    if ([str n, int a] := l) return "<n>/<a>";
+    return "[" + j(", ", [pWildAttrValue(i) | i <- l]) + "]";
+}
 str pWildAttrValue(value v) = "<v>";
