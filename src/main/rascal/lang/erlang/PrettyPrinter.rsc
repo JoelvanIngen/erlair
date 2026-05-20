@@ -235,7 +235,7 @@ str showExprNoParens(mc(_, \assoc, quals)) = "#{ <pAssociation(\assoc)> || <j(",
 str showExprNoParens(block(_, body)) = "begin\n" + showBody(body) + "\nend";
 str showExprNoParens(\case(_, expr, clauses)) = "case <pExpr(expr,0)> of\n" + j(";\n", [showClause("", c, false) | c <- clauses]) + "\nend";
 str showExprNoParens(\catch(_, expr)) = "catch <pExpr(expr, precCatch-1)>";
-str showExprNoParens(\if(_, clauses)) = "if\n" + j(";\n", [showClause("", c, false) | c <- clauses]) + "\nend";
+str showExprNoParens(\if(_, clauses)) = "if\n" + j(";\n", [showClause("", c, false, isIf=true) | c <- clauses]) + "\nend";
 str showExprNoParens(receive(_, clauses)) = "receive\n" + j(";\n", [showClause("", c, false) | c <- clauses]) + "\nend";
 str showExprNoParens(receive(_, clauses, timeoutExpr, timeoutBody)) =
     "receive\n" + j(";\n", [showClause("", c, false) | c <- clauses]) + "\nafter <pExpr(timeoutExpr,0)> -\>\n" + showBody(timeoutBody) + "\nend";
@@ -318,13 +318,20 @@ str pQualifier(mGenerateStrict(_, \assoc, e)) = "<pAssociation(\assoc)> \<:- <pE
 str pAssociation(mapFieldAssoc(_, k, v)) = "<pExpr(k, 0)> =\> <pExpr(v, 0)>";
 str pAssociation(mapFieldExact(_, k, v)) = "<pExpr(k, 0)> := <pExpr(v, 0)>";
 
-str showClause(str funcName, Clause clause, bool isFunDecl) {
+str showClause(str funcName, Clause clause, bool isFunDecl, bool isIf = false) {
     patterns = clause.patterns;
     guards = clause.guards;
     body = clause.body;
     patStr = j(", ", [pPattern(p) | p <- patterns]);
     guardStr = showGuards(guards);
     bodyStr = showBody(body);
+
+    if (isIf) {
+        // Remove 'when' prefix
+        str ifCond = j("; ", [j(", ", [pExpr(g, 0) | g <- guard]) | guard <- guards]);
+        return "<ifCond> -\> <bodyStr>";
+    }
+
     if (isFunDecl) return "<funcName>(<patStr>)<guardStr> -\> <bodyStr>";
     else return "(<patStr>)<guardStr> -\> <bodyStr>";
 }
