@@ -333,7 +333,7 @@ str showClause(str funcName, Clause clause, bool isFunDecl, bool isIf = false) {
     }
 
     if (isFunDecl) return "<funcName>(<patStr>)<guardStr> -\> <bodyStr>";
-    else return "(<patStr>)<guardStr> -\> <bodyStr>";
+    else return "<patStr><guardStr> -\> <bodyStr>";
 }
 
 str showGuards(GuardSeq guards) {
