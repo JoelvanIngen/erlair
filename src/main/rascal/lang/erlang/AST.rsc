@@ -30,6 +30,8 @@ data Form
     | recordDecl(Annotation \anno, str name, list[RecordField] fields)
     | typeDecl(Annotation \anno, str name, Type \type, list[Type] vars)
     | opaqueDecl(Annotation \anno, str name, Type \type, list[Type] vars)
+    | docAttr(Annotation \anno, str text)
+    | commentAttr(Annotation \anno, str text)
     | wildAttr(Annotation \anno, str name, value \value)
     | error(value description)
     | warning(value description)
@@ -140,6 +142,7 @@ data Clause
 // Types from -spec and -type
 data Type
     = annType(Annotation \anno, Type var, Type \type)  // A :: T_0
+    | boundedFun(Annotation \anno, Type \type, list[TypeConstraint] constraints)  // T_f when C_1; ...; C_k
     | literal(Literal lit)
     | binary(Annotation \anno, Type m, Type n)  // <<_:M,_:_*N>>
     | nil(Annotation \anno)  // '[]'
