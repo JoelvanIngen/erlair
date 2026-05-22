@@ -41,11 +41,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     str currentModName = "unknown";
     loc currentModule = |erlang+module:///unknown|;
 
-    // Pre-process exports etc to ensure they're marked as public before big traversal
+    // Module first so all other forms have valid location information
     for (Form f <- ast) {
         switch (f) {
-            // Module definitions
-            // TODO: move to even higher priority in case -module is used not at the top of the file?
             case moduleAttr(Annotation a, str name): {
                 currentModName = name;
                 currentModule = |erlang+module:///<name>|;
@@ -54,7 +52,12 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.declarations += {<currentModule, physLoc>};
                 model.names += {<name, physLoc>};
             }
+        }
+    }
 
+    // Pre-process exports etc to ensure they're marked as public before big traversal
+    for (Form f <- ast) {
+        switch (f) {
             // Exports
             case exportAttr(_, list[tuple[str name, int arity]] exports): {
                 for (<str funcName, int arity> <- exports) {
