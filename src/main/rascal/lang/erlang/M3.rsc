@@ -27,8 +27,7 @@ data TypeSymbol
 
 loc annoToLoc(loc fileLoc, Annotation \anno) {
     switch (\anno) {
-        case \anno(int l): return fileLoc(0, 0, <l, 0>, <l, 0>);
-        case \anno(int l, _): return fileLoc(0, 0, <l, 0>, <l, 0>);
+        case \anno(int l, int c): return fileLoc(0, 0, <l, c>, <l, c>);
         default: throw "Unrecognised Annotation <\anno>";
     }
 }
