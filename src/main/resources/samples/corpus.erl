@@ -1,5 +1,7 @@
 %% This file was adapted from https://github.com/zuiderkwast/erlang_abstract_format/blob/master/corpus.erl to test the EAF parser
 
+-module(corpus).
+
 -doc
 "Erlang Abstract Format\n"
 "======================\n"
@@ -33,7 +35,6 @@
 "---------------\n".
 
 -file("corpus.erl", 37).
--module(corpus).
 -compile(export_all).
 -vsn("1.2.3").
 -on_load(my_function/0).
