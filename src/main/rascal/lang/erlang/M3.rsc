@@ -40,6 +40,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     str currentModName = "unknown";
     loc currentModule = |erlang+module:///unknown|;
 
+    set[tuple[str name, int arity]] localFunctions = {};
+    map[tuple[str name, int arity] _, str \module] importedFunctions = ();
+
     // Module first so all other forms have valid location information
     for (Form f <- ast) {
         switch (f) {
@@ -63,6 +66,16 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                     loc funcLoc = |erlang+function:///<currentModName>/<funcName>/<toString(arity)>|;
                     model.modifiers += {<funcLoc, \public()>};
                 }
+            }
+
+            // Imports
+            case importAttr(_, str \module, list[tuple[str name, int arity]] imports): {
+                importedFunctions += (i : \module | i <- imports);
+            }
+
+            // Function declarations
+            case functionDecl(_, str name, int arity, _): {
+                localFunctions += {<name, arity>};
             }
 
             // Records
@@ -282,12 +295,25 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             }
 
             // Local funcall
+            // TODO: Check if (nested) named functions are handled correctly
             case Expression::call(Annotation a, Expression funExpr, list[Expression] args): {
                 if (Expression::literal(atom(_, str funName)) := funExpr ||
                     Expression::var(_, str funName) := funExpr) {
 
                     int arity = size(args);
-                    loc callee = |erlang+function:///<currentModName>/<funName>/<toString(arity)>|;
+
+                    loc callee = |unknown:///|;  // Rascal insists on immediate variable initialisation
+                    identifier = <funName, arity>;
+                    if (identifier in localFunctions) {
+                        callee = |erlang+function:///<currentModName>/<funName>/<toString(arity)>|;
+                    } else if (identifier in importedFunctions) {
+                        str \module = importedFunctions[<funName, arity>];
+                        callee = |erlang+function:///<\module>/<funName>/<toString(arity)>|;
+                    } else {
+                        // Built-in or dynamic call resolved at runtime?
+                        callee = |erlang+unresolved:///|;
+                    }
+
                     loc physLoc = annoToLoc(fileLoc, a);
 
                     model.uses += {<physLoc, callee>};
