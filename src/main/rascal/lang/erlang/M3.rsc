@@ -81,13 +81,39 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             }
 
             // Records
-            case recordDecl(Annotation a, str name, _): {
+            case recordDecl(Annotation a, str name, list[RecordField] fields): {
                 loc recLoc = |erlang+record:///<currentModName>/<name>|;
                 loc physLoc = annoToLoc(fileLoc, a);
 
                 model.declarations += {<recLoc, physLoc>};
                 model.containment += {<currentModule, recLoc>};
                 model.names += {<name, physLoc>};
+
+                for (RecordField rf <- fields) {
+                    // These will always be overwritten but I like my modules warning-free
+                    // and Rascal insists on initialising variables so here are mock values
+                    Annotation fieldAnno = \anno(0, 0);
+                    Expression fieldExpr = Expression::var(\anno(0, 0), "");
+
+                    switch (rf) {
+                        case recordField(Annotation fa, Expression fe): { fieldAnno = fa; fieldExpr = fe; }
+                        case recordField(Annotation fa, Expression fe, _): { fieldAnno = fa; fieldExpr = fe; }
+                        case typedRecordField(Annotation fa, Expression fe, _): { fieldAnno = fa; fieldExpr = fe; }
+                        case typedRecordField(Annotation fa, Expression fe, _, _): { fieldAnno = fa; fieldExpr = fe; }
+                        default: throw "M3: Unexpected recordField <rf>";
+                    }
+
+                    if (Expression::literal(atom(_, str fn)) := fieldExpr) {
+                        loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
+                        loc fieldPhysLoc = annoToLoc(fileLoc, fieldAnno);
+                        
+                        model.declarations += {<fieldLoc, fieldPhysLoc>};
+                        model.containment += {<recLoc, fieldLoc>};
+                        model.names += {<fn, fieldPhysLoc>};
+                    } else {
+                        throw "M3: Unexpected shape of fieldExpr <fieldExpr>";
+                    }
+                }
             }
 
             // (-type) type definitions
@@ -228,6 +254,85 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 for (c <- elseClauses)
                     analyseScope(c, innerScope, currentEnv);
                 fail;
+            }
+
+            // Record instantiation
+            case Expression::record(Annotation a, str name, list[RecordFieldExpr] fields): {
+                loc recLoc = |erlang+record:///<currentModName>/<name>|;
+                loc physLoc = annoToLoc(fileLoc, a);
+                model.uses += {<physLoc, recLoc>};
+
+                for (RecordFieldExpr rfe <- fields) {
+                    if (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) := rfe) {
+                        loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
+                        loc fieldPhysLoc = annoToLoc(fileLoc, fa);
+                        model.uses += {<fieldPhysLoc, fieldLoc>};
+                    }
+                }
+            }
+            // Record field access
+            case Expression::recordField(Annotation a, Expression expr, str name, Expression field): {
+                loc recLoc = |erlang+record:///<currentModName>/<name>|;
+                loc physLoc = annoToLoc(fileLoc, a);
+                model.uses += {<physLoc, recLoc>};
+
+                if (Expression::literal(atom(Annotation fa, str fn)) := field) {
+                    loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
+                    loc fieldPhysLoc = annoToLoc(fileLoc, fa);
+                    model.uses += {<fieldPhysLoc, fieldLoc>};
+                }
+            }
+            // Record index
+            case Expression::recordIndex(Annotation a, str name, Expression field): {
+                loc recLoc = |erlang+record:///<currentModName>/<name>|;
+                loc physLoc = annoToLoc(fileLoc, a);
+                model.uses += {<physLoc, recLoc>};
+
+                if (Expression::literal(atom(Annotation fa, str fn)) := field) {
+                    loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
+                    loc fieldPhysLoc = annoToLoc(fileLoc, fa);
+                    model.uses += {<fieldPhysLoc, fieldLoc>};
+                }
+            }
+            // Record update
+            case Expression::recordUpdate(Annotation a, Expression expr, str name, list[RecordFieldExpr] fields): {
+                loc recLoc = |erlang+record:///<currentModName>/<name>|;
+                loc physLoc = annoToLoc(fileLoc, a);
+                model.uses += {<physLoc, recLoc>};
+
+                for (RecordFieldExpr rfe <- fields) {
+                    if (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) := rfe) {
+                        loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
+                        loc fieldPhysLoc = annoToLoc(fileLoc, fa);
+                        model.uses += {<fieldPhysLoc, fieldLoc>};
+                    }
+                }
+            }
+            // Record pattern match
+            case Pattern::record(Annotation a, str name, list[RecordFieldPattern] fields): {
+                loc recLoc = |erlang+record:///<currentModName>/<name>|;
+                loc physLoc = annoToLoc(fileLoc, a);
+                model.uses += {<physLoc, recLoc>};
+
+                for (RecordFieldPattern rfp <- fields) {
+                    if (recordFieldPattern(Annotation fa, Pattern::literal(atom(_, str fn)), _) := rfp) {
+                        loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
+                        loc fieldPhysLoc = annoToLoc(fileLoc, fa);
+                        model.uses += {<fieldPhysLoc, fieldLoc>};
+                    }
+                }
+            }
+            // Record index pattern
+            case Pattern::recordIndex(Annotation a, str name, Pattern field): {
+                loc recLoc = |erlang+record:///<currentModName>/<name>|;
+                loc physLoc = annoToLoc(fileLoc, a);
+                model.uses += {<physLoc, recLoc>};
+
+                if (Pattern::literal(atom(Annotation fa, str fn)) := field) {
+                    loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
+                    loc fieldPhysLoc = annoToLoc(fileLoc, fa);
+                    model.uses += {<fieldPhysLoc, fieldLoc>};
+                }
             }
             
             // Generators P <- E evaluate E first, then bind P
