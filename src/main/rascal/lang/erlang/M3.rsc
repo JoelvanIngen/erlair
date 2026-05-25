@@ -43,6 +43,8 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     set[tuple[str name, int arity]] localFunctions = {};
     map[tuple[str name, int arity] _, str \module] importedFunctions = ();
 
+    bool exportAll = hasExportAll(ast);
+
     // Module first so all other forms have valid location information
     for (Form f <- ast) {
         switch (f) {
@@ -355,7 +357,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             model.containment += {<|erlang+module:///<currentModName>|, funcLoc>};
             model.names += {<name, physLoc>};
             
-            if (<funcLoc, \public()> notin model.modifiers)
+            if (exportAll)
+                model.modifiers += {<funcLoc, \public()>};
+            else if (<funcLoc, \public()> notin model.modifiers)
                 model.modifiers += {<funcLoc, \private()>};
 
             for (Clause c <- clauses) 
@@ -364,4 +368,18 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     }
 
     return model;
+}
+
+/**
+ * Checks for export_all or compile_all
+ */
+bool hasExportAll(EAF ast) {
+    for (wildAttr(_, str name, value \value) <- ast) {
+        if (name != "compile") continue;
+
+        if (str sv := \value && (sv == "export_all" || sv == "compile_all")) return true;
+        if (list[str] lv := \value && ("export_all" in lv || "compile_all" in lv)) return true;
+    }
+
+    return false;
 }
