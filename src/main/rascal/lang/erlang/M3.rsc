@@ -171,6 +171,54 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         return "<prefix>_<scopeIdCounter>";
     }
 
+    void registerRecordUse(Annotation a, str name) {
+        loc recLoc = |erlang+record:///<currentModName>/<name>|;
+        loc physLoc = annoToLoc(fileLoc, a);
+        model.uses += {<physLoc, recLoc>};
+    }
+
+    void registerFieldUse(Annotation fa, str rn, str fn) {
+        loc fieldLoc = |erlang+field:///<currentModName>/<rn>/<fn>|;
+        loc fieldPhysLoc = annoToLoc(fileLoc, fa);
+        model.uses += {<fieldPhysLoc, fieldLoc>};
+    }
+
+    Env analyseGen(Pattern pat, Expression expr, loc scopeLoc, Env env) {
+        env = analyseScope(expr, scopeLoc, env);
+        return analyseScope(pat, scopeLoc, env);
+    }
+
+    Env analyseMGen(Association association, Expression expr, loc scopeLoc, Env env) {
+        env = analyseScope(expr, scopeLoc, env);
+        return analyseScope(association, scopeLoc, env);
+    }
+
+    void analyseComprehension(str prefix, list[Qualifier] qualifiers, value head, loc scopeLoc, Env env) {
+        loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId(prefix)>"];
+        env = analyseScope(qualifiers, innerScope, env);
+        analyseScope(head, innerScope, env);
+    }
+
+    loc resolveLocalCallee(str funName, int arity) {
+        tuple[str, int] identifier = <funName, arity>;
+        if (identifier in localFunctions) {
+            return |erlang+function:///<currentModName>/<funName>/<toString(arity)>|;
+        } 
+        if (identifier in importedFunctions) {
+            str \module = importedFunctions[identifier];
+            return |erlang+function:///<\module>/<funName>/<toString(arity)>|;
+        }
+        return |erlang+unresolved:///|;
+    }
+
+    void registerCall(Annotation a, loc callee, loc scopeLoc) {
+        loc physLoc = annoToLoc(fileLoc, a);
+        model.uses += {<physLoc, callee>};
+        if (scopeLoc.scheme != "unknown") {
+            model.functionCalls += {<scopeLoc, callee>};
+        }
+    }
+
     // `value` for n should be `node` or `list[node]`
     // TODO: Find out of we can define type unions in Rascal
     Env analyseScope(value n, loc scopeLoc, Env startingEnv) {
@@ -185,7 +233,6 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 innerEnv = analyseScope(patterns, innerScope, innerEnv);
                 innerEnv = analyseScope(guards, innerScope, innerEnv);
                 analyseScope(body, innerScope, innerEnv);
-
                 fail;
             }
 
@@ -214,24 +261,15 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
 
             // Comprehensions
             case lc(_, Expression expr, list[Qualifier] qualifiers): {
-                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("lc")>"];
-                innerEnv = currentEnv;
-                innerEnv = analyseScope(qualifiers, innerScope, innerEnv);
-                analyseScope(expr, innerScope, innerEnv);
+                analyseComprehension("lc", qualifiers, expr, scopeLoc, currentEnv);
                 fail;
             }
             case bc(_, Expression template, list[Qualifier] qualifiers): {
-                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("bc")>"];
-                innerEnv = currentEnv;
-                innerEnv = analyseScope(qualifiers, innerScope, innerEnv);
-                analyseScope(template, innerScope, innerEnv);
+                analyseComprehension("bc", qualifiers, template, scopeLoc, currentEnv);
                 fail;
             }
             case mc(_, Association association, list[Qualifier] qualifiers): {
-                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("mc")>"];
-                innerEnv = currentEnv;
-                innerEnv = analyseScope(qualifiers, innerScope, innerEnv);
-                analyseScope(association, innerScope, innerEnv);
+                analyseComprehension("mc", qualifiers, association, scopeLoc, currentEnv);
                 fail;
             }
 
@@ -263,112 +301,70 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
 
             // Record instantiation
             case Expression::record(Annotation a, str name, list[RecordFieldExpr] fields): {
-                loc recLoc = |erlang+record:///<currentModName>/<name>|;
-                loc physLoc = annoToLoc(fileLoc, a);
-                model.uses += {<physLoc, recLoc>};
-
-                for (RecordFieldExpr rfe <- fields) {
-                    if (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) := rfe) {
-                        loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
-                        loc fieldPhysLoc = annoToLoc(fileLoc, fa);
-                        model.uses += {<fieldPhysLoc, fieldLoc>};
-                    }
+                registerRecordUse(a, name);
+                for (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) <- fields) {
+                    registerFieldUse(fa, name, fn);
                 }
             }
             // Record field access
-            case Expression::recordField(Annotation a, Expression expr, str name, Expression field): {
-                loc recLoc = |erlang+record:///<currentModName>/<name>|;
-                loc physLoc = annoToLoc(fileLoc, a);
-                model.uses += {<physLoc, recLoc>};
-
+            case Expression::recordField(Annotation a, _, str name, Expression field): {
+                registerRecordUse(a, name);
                 if (Expression::literal(atom(Annotation fa, str fn)) := field) {
-                    loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
-                    loc fieldPhysLoc = annoToLoc(fileLoc, fa);
-                    model.uses += {<fieldPhysLoc, fieldLoc>};
+                    registerFieldUse(fa, name, fn);
                 }
             }
             // Record index
             case Expression::recordIndex(Annotation a, str name, Expression field): {
-                loc recLoc = |erlang+record:///<currentModName>/<name>|;
-                loc physLoc = annoToLoc(fileLoc, a);
-                model.uses += {<physLoc, recLoc>};
-
+                registerRecordUse(a, name);
                 if (Expression::literal(atom(Annotation fa, str fn)) := field) {
-                    loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
-                    loc fieldPhysLoc = annoToLoc(fileLoc, fa);
-                    model.uses += {<fieldPhysLoc, fieldLoc>};
+                    registerFieldUse(fa, name, fn);
                 }
             }
             // Record update
-            case Expression::recordUpdate(Annotation a, Expression expr, str name, list[RecordFieldExpr] fields): {
-                loc recLoc = |erlang+record:///<currentModName>/<name>|;
-                loc physLoc = annoToLoc(fileLoc, a);
-                model.uses += {<physLoc, recLoc>};
-
-                for (RecordFieldExpr rfe <- fields) {
-                    if (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) := rfe) {
-                        loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
-                        loc fieldPhysLoc = annoToLoc(fileLoc, fa);
-                        model.uses += {<fieldPhysLoc, fieldLoc>};
-                    }
+            case Expression::recordUpdate(Annotation a, _, str name, list[RecordFieldExpr] fields): {
+                registerRecordUse(a, name);
+                for (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) <- fields) {
+                    registerFieldUse(fa, name, fn);
                 }
             }
             // Record pattern match
             case Pattern::record(Annotation a, str name, list[RecordFieldPattern] fields): {
-                loc recLoc = |erlang+record:///<currentModName>/<name>|;
-                loc physLoc = annoToLoc(fileLoc, a);
-                model.uses += {<physLoc, recLoc>};
-
-                for (RecordFieldPattern rfp <- fields) {
-                    if (recordFieldPattern(Annotation fa, Pattern::literal(atom(_, str fn)), _) := rfp) {
-                        loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
-                        loc fieldPhysLoc = annoToLoc(fileLoc, fa);
-                        model.uses += {<fieldPhysLoc, fieldLoc>};
-                    }
+                registerRecordUse(a, name);
+                for (recordFieldPattern(Annotation fa, Pattern::literal(atom(_, str fn)), _) <- fields) {
+                    registerFieldUse(fa, name, fn);
                 }
             }
             // Record index pattern
             case Pattern::recordIndex(Annotation a, str name, Pattern field): {
-                loc recLoc = |erlang+record:///<currentModName>/<name>|;
-                loc physLoc = annoToLoc(fileLoc, a);
-                model.uses += {<physLoc, recLoc>};
-
+                registerRecordUse(a, name);
                 if (Pattern::literal(atom(Annotation fa, str fn)) := field) {
-                    loc fieldLoc = |erlang+field:///<currentModName>/<name>/<fn>|;
-                    loc fieldPhysLoc = annoToLoc(fileLoc, fa);
-                    model.uses += {<fieldPhysLoc, fieldLoc>};
+                    registerFieldUse(fa, name, fn);
                 }
             }
             
             // Generators P <- E evaluate E first, then bind P
             case generate(_, Pattern pat, Expression expr): {
-                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
-                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                currentEnv = analyseGen(pat, expr, scopeLoc, currentEnv);
                 fail;
             }
             case generateStrict(_, Pattern pat, Expression expr): {
-                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
-                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                currentEnv = analyseGen(pat, expr, scopeLoc, currentEnv);
                 fail;
             }
             case bGenerate(_, Pattern pat, Expression expr): {
-                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
-                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                currentEnv = analyseGen(pat, expr, scopeLoc, currentEnv);
                 fail;
             }
             case bGenerateStrict(_, Pattern pat, Expression expr): {
-                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
-                currentEnv = analyseScope(pat, scopeLoc, currentEnv);
+                currentEnv = analyseGen(pat, expr, scopeLoc, currentEnv);
                 fail;
             }
             case mGenerate(_, Association association, Expression expr): {
-                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
-                currentEnv = analyseScope(association, scopeLoc, currentEnv);
+                currentEnv = analyseMGen(association, expr, scopeLoc, currentEnv);
                 fail;
             }
             case mGenerateStrict(_, Association association, Expression expr): {
-                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
-                currentEnv = analyseScope(association, scopeLoc, currentEnv);
+                currentEnv = analyseMGen(association, expr, scopeLoc, currentEnv);
                 fail;
             }
 
@@ -376,10 +372,10 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             case Pattern::var(Annotation a, str name): {
                 // TODO: Also ignore anything starting with '_'?
                 if (name != "_") {
+                    loc physLoc = annoToLoc(fileLoc, a);
                     if (name notin currentEnv) {
                         // Declaration
                         loc varLoc = scopeLoc[scheme="erlang+variable"][path="<scopeLoc.path>/<name>"];
-                        loc physLoc = annoToLoc(fileLoc, a);
 
                         model.declarations += {<varLoc, physLoc>};
                         model.containment += {<scopeLoc, varLoc>};
@@ -387,20 +383,18 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                         currentEnv[name] = varLoc;
                     } else {
                         // Use
-                        loc physLoc = annoToLoc(fileLoc, a);
                         model.uses += {<physLoc, currentEnv[name]>};
                     }
                 }
             }
             case Expression::var(Annotation a, str name): {
                 if (name != "_") {
+                    loc physLoc = annoToLoc(fileLoc, a);
                     if (name in currentEnv) {
-                        loc physLoc = annoToLoc(fileLoc, a);
                         model.uses += {<physLoc, currentEnv[name]>};
                     } else {
                         // If this occurs, it is probably very bad
                         loc varLoc = scopeLoc[scheme="erlang+variable"][path="<scopeLoc.path>/<name>"];
-                        loc physLoc = annoToLoc(fileLoc, a);
                         model.uses += {<physLoc, varLoc>};
                     }
                 }
@@ -409,48 +403,19 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             // Local funcall
             // TODO: Check if (nested) named functions are handled correctly
             case Expression::call(Annotation a, Expression funExpr, list[Expression] args): {
-                if (Expression::literal(atom(_, str funName)) := funExpr ||
-                    Expression::var(_, str funName) := funExpr) {
-
-                    int arity = size(args);
-
-                    loc callee = |unknown:///|;  // Rascal insists on immediate variable initialisation
-                    identifier = <funName, arity>;
-                    if (identifier in localFunctions) {
-                        callee = |erlang+function:///<currentModName>/<funName>/<toString(arity)>|;
-                    } else if (identifier in importedFunctions) {
-                        str \module = importedFunctions[<funName, arity>];
-                        callee = |erlang+function:///<\module>/<funName>/<toString(arity)>|;
-                    } else {
-                        // Built-in or dynamic call resolved at runtime?
-                        callee = |erlang+unresolved:///|;
-                    }
-
-                    loc physLoc = annoToLoc(fileLoc, a);
-
-                    model.uses += {<physLoc, callee>};
-                    if (scopeLoc.scheme != "unknown") {
-                        model.functionCalls += {<scopeLoc, callee>};
-                    }
+                if (Expression::literal(atom(_, str funName)) := funExpr || Expression::var(_, str funName) := funExpr) {
+                    loc callee = resolveLocalCallee(funName, size(args));
+                    registerCall(a, callee, scopeLoc);
                 }
             }
 
             // Remote funcall
             case Expression::call(Annotation a, Expression modExpr, Expression funExpr, list[Expression] args): {
-                if (Expression::literal(atom(_, str targetMod)) := modExpr,
-                    Expression::literal(atom(_, str funName)) := funExpr) {
-
-                    int arity = size(args);
-                    loc callee = |erlang+function:///<targetMod>/<funName>/<toString(arity)>|;
-                    loc physLoc = annoToLoc(fileLoc, a);
-                    
-                    model.uses += {<physLoc, callee>};
-                    if (scopeLoc.scheme != "unknown") {
-                        model.functionCalls += {<scopeLoc, callee>};
-                    }
+                if (Expression::literal(atom(_, str targetMod)) := modExpr, Expression::literal(atom(_, str funName)) := funExpr) {
+                    loc callee = |erlang+function:///<targetMod>/<funName>/<toString(size(args))>|;
+                    registerCall(a, callee, scopeLoc);
                 } else {
-                    loc physLoc = annoToLoc(fileLoc, a);
-                    model.uses += {<physLoc, |unresolved:///dynamic_call|>};
+                    registerCall(a, |unresolved:///dynamic_call|, scopeLoc);
                 }
             }
         }
@@ -458,23 +423,21 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         return currentEnv;
     }
 
-    for (Form f <- ast) {
-        if (functionDecl(Annotation a, str name, int arity, list[Clause] clauses) := f) {
-            loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
-            loc physLoc = annoToLoc(fileLoc, a);
-            
-            model.declarations += {<funcLoc, physLoc>};
-            model.containment += {<|erlang+module:///<currentModName>|, funcLoc>};
-            model.names += {<name, physLoc>};
-            
-            if (exportAll)
-                model.modifiers += {<funcLoc, \public()>};
-            else if (<funcLoc, \public()> notin model.modifiers)
-                model.modifiers += {<funcLoc, \private()>};
+    for (functionDecl(Annotation a, str name, int arity, list[Clause] clauses) <- ast) {
+        loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
+        loc physLoc = annoToLoc(fileLoc, a);
+        
+        model.declarations += {<funcLoc, physLoc>};
+        model.containment += {<|erlang+module:///<currentModName>|, funcLoc>};
+        model.names += {<name, physLoc>};
+        
+        if (exportAll)
+            model.modifiers += {<funcLoc, \public()>};
+        else if (<funcLoc, \public()> notin model.modifiers)
+            model.modifiers += {<funcLoc, \private()>};
 
-            for (Clause c <- clauses) 
-                analyseScope(c, funcLoc, ());
-        }
+        for (Clause c <- clauses) 
+            analyseScope(c, funcLoc, ());
     }
 
     return model;
@@ -484,9 +447,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
  * Checks for export_all or compile_all
  */
 bool hasExportAll(EAF ast) {
-    for (wildAttr(_, str name, value \value) <- ast) {
-        if (name != "compile") continue;
-
+    for (wildAttr(_, "compile", value \value) <- ast) {
         if (str sv := \value && (sv == "export_all" || sv == "compile_all")) return true;
         if (list[str] lv := \value && ("export_all" in lv || "compile_all" in lv)) return true;
     }
