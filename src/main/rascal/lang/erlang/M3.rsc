@@ -46,17 +46,13 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     bool exportAll = hasExportAll(ast);
 
     // Module first so all other forms have valid location information
-    for (Form f <- ast) {
-        switch (f) {
-            case moduleAttr(Annotation a, str name): {
-                currentModName = name;
-                currentModule = |erlang+module:///<name>|;
-                loc physLoc = annoToLoc(fileLoc, a);
+    for (moduleAttr(Annotation a, str name) <- ast) {
+        currentModName = name;
+        currentModule = |erlang+module:///<name>|;
+        loc physLoc = annoToLoc(fileLoc, a);
 
-                model.declarations += {<currentModule, physLoc>};
-                model.names += {<name, physLoc>};
-            }
-        }
+        model.declarations += {<currentModule, physLoc>};
+        model.names += {<name, physLoc>};
     }
 
     // Pre-process exports etc to ensure they're marked as public before big traversal
