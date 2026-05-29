@@ -1,6 +1,6 @@
 module lang::erlang::M3
 
-extend analysis::m3::Core;  // "extend" is is what clair does, I don't know why
+extend analysis::m3::Core;
 extend analysis::m3::TypeSymbol;
 
 import List;
