@@ -33,8 +33,13 @@ data Form
     | docAttr(Annotation \anno, str text)
     | commentAttr(Annotation \anno, str text)
     | wildAttr(Annotation \anno, str name, value \value)
-    | error(value description)
-    | warning(value description)
+    // I'm very unsure about "by". It's a field that always seems to be "epp",
+    // which I do guess is the source/entity that threw the warning/error.
+    // The description field seems to vary in format, and I cannot find documentation
+    // on the possible formats, so it will be kept as a `value` for now.
+    // It can be made into a separate data structure later, with a `value` fallback
+    | error(Annotation \anno, str by, value description)
+    | warning(Annotation \anno, str by, value description)
     | eof(Annotation \anno)
     ;
 
