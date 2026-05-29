@@ -4,6 +4,7 @@ extend analysis::m3::Core;
 extend analysis::m3::TypeSymbol;
 
 import List;
+import Message;
 import util::Math;
 import lang::erlang::AST;
 
@@ -150,6 +151,14 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             case callbackSpec(_, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
+            }
+
+            // Warnings and errors
+            case error(Annotation a, _, value description): {
+                model.messages += [error("<description>", annoToLoc(fileLoc, a))];
+            }
+            case warning(Annotation a, _, value description): {
+                model.messages += [warning("<description>", annoToLoc(fileLoc, a))];
             }
         }
     }
