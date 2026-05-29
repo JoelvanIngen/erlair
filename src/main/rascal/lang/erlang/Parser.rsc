@@ -48,10 +48,10 @@ Form parseForm(["attribute", value \anno, "comment", str text])
     = commentAttr(parseAnno(\anno), text);
 Form parseForm(["attribute", value \anno, str name, value text])
     = wildAttr(parseAnno(\anno), name, text);
-Form parseForm(["error", value description])
-    = error(description);
-Form parseForm(["warning", value description])
-    = warning(description);
+Form parseForm(["error", [value \anno, str by, value description]])
+    = error(parseAnno(\anno), by, description);
+Form parseForm(["warning", [value \anno, str by, value description]])
+    = warning(parseAnno(\anno), by, description);
 Form parseForm(["eof", value \anno])
     = eof(parseAnno(\anno));
 default Form parseForm(value v) = unrecognised(#Form, v);

@@ -107,9 +107,9 @@ str pForm(commentAttr(_, str text))
 str pForm(wildAttr(_, str name, value \value))
     = "-<name>(<pWildAttrValue(\value)>).";
 // Keeping errors/warnings as comments for demonstration purposes
-str pForm(error(d))
+str pForm(error(_, _, value d))
     = "%% error: <d>";
-str pForm(warning(d))
+str pForm(warning(_, _, value d))
     = "%% warning: <d>";
 str pForm(eof(_))
     = "";
