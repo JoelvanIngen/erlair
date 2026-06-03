@@ -53,11 +53,11 @@ data RecordField
 
 // Constants
 data Literal
-    = atom(Annotation \anno, str sValue)
-    | char(Annotation \anno, str sValue)
-    | float(Annotation \anno, real fValue)
-    | integer(Annotation \anno, int iValue)
-    | string(Annotation \anno, str sValue)
+    = atom(Annotation \anno, str \value)
+    | char(Annotation \anno, str \value)
+    | float(Annotation \anno, str \value)
+    | integer(Annotation \anno, str \value)
+    | string(Annotation \anno, str \value)
     ;
 
 // Pattern matching/LHS

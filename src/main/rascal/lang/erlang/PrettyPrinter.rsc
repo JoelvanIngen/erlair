@@ -127,10 +127,10 @@ str pLiteral(atom(_, str s))
     = pAtom(s);
 str pLiteral(char(_, str s))
     = "<s>";
-str pLiteral(float(_, real f))
-    = "<f>";
-str pLiteral(integer(_, int i))
-    = "<i>";
+str pLiteral(float(_, str f))
+    = f;
+str pLiteral(integer(_, str i))
+    = i;
 str pLiteral(string(_, str s))
     = "\"<escapeString(s)>\"";
 
@@ -347,8 +347,8 @@ str pType(boundedFun(_, Type \type, list[TypeConstraint] constraints))
     = "<pType(\type)> when <j(", ", [pTypeConstraint(c) | c <- constraints])>";
 str pType(Type::literal(l)) = pLiteral(l);
 str pType(binary(_, m, n)) {
-    bool mZero = (Type::literal(integer(_, 0)) := m);
-    bool nZero = (Type::literal(integer(_, 0)) := n);
+    bool mZero = (Type::literal(integer(_, "0")) := m);
+    bool nZero = (Type::literal(integer(_, "0")) := n);
     if (mZero && nZero) return "\<\<\>\>";
     if (nZero) return "\<\<_:<pType(m)>\>\>";
     if (mZero) return "\<\<_:_*<pType(n)>\>\>";
