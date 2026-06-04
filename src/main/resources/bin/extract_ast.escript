@@ -22,7 +22,7 @@ to_json(Atom) when is_atom(Atom) ->
 to_json(Int) when is_integer(Int) ->
     integer_to_list(Int);
 to_json(Float) when is_float(Float) ->
-    float_to_list(Float);
+    "\"" ++ float_to_list(Float) ++ "\"";
 to_json(Tuple) when is_tuple(Tuple) ->
     % Tuples become JSON arrays
     to_json_array(tuple_to_list(Tuple));

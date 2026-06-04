@@ -70,10 +70,10 @@ Literal parseLiteral(["atom", value \anno, str v])
     = atom(parseAnno(\anno), v);
 Literal parseLiteral(["char", value \anno, str v])
     = char(parseAnno(\anno), v);
-Literal parseLiteral(["float", value \anno, real v])
+Literal parseLiteral(["float", value \anno, str v])
     = float(parseAnno(\anno), v);
 Literal parseLiteral(["integer", value \anno, int v])
-    = integer(parseAnno(\anno), v);
+    = integer(parseAnno(\anno), "<v>");
 Literal parseLiteral(["string", value \anno, str v])
     = string(parseAnno(\anno), v);
 Literal parseLiteral(["string", value \anno, []])
