@@ -56,6 +56,32 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         model.names += {<name, physLoc>};
     }
 
+    // Traverses nested Type nodes
+    void analyseType(Type t) {
+        top-down visit(t) {
+            case userType(Annotation a, str typeName, list[Type] args): {
+                loc typeLoc = |erlang+type:///<currentModName>/<typeName>/<toString(size(args))>|;
+                model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
+                fail;
+            }
+            case remoteType(Annotation a, Type \module, Type name, list[Type] args): {
+                if (Type::literal(atom(_, str moduleName)) := \module
+                    , Type::literal(atom(_, str typeName)) := name) {
+                    loc typeLoc = |erlang+type:///<moduleName>/<typeName>/<toString(size(args))>|;
+                    model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
+                }
+                fail;
+            }
+            case record(_, list[Type] fields): {
+                if ([Type::literal(atom(Annotation fa, str recName)), *_] := fields) {
+                    loc recLoc = |erlang+record:///<currentModName>/<recName>|;
+                    model.uses += {<annoToLoc(fileLoc, fa), recLoc>};
+                }
+                fail;
+            }
+        }
+    }
+
     // Pre-process exports etc to ensure they're marked as public before big traversal
     for (Form f <- ast) {
         switch (f) {
@@ -95,8 +121,14 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                     switch (rf) {
                         case recordField(Annotation fa, Expression fe): { fieldAnno = fa; fieldExpr = fe; }
                         case recordField(Annotation fa, Expression fe, _): { fieldAnno = fa; fieldExpr = fe; }
-                        case typedRecordField(Annotation fa, Expression fe, _): { fieldAnno = fa; fieldExpr = fe; }
-                        case typedRecordField(Annotation fa, Expression fe, _, _): { fieldAnno = fa; fieldExpr = fe; }
+                        case typedRecordField(Annotation fa, Expression fe, Type t): { 
+                            fieldAnno = fa; fieldExpr = fe; 
+                            analyseType(t);
+                        }
+                        case typedRecordField(Annotation fa, Expression fe, _, Type t): { 
+                            fieldAnno = fa; fieldExpr = fe; 
+                            analyseType(t);
+                        }
                         default: throw "M3: Unexpected recordField <rf>";
                     }
 
@@ -122,6 +154,11 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.containment += {<currentModule, typeLoc>};
                 model.names += {<name, physLoc>};
                 model.types += {<typeLoc, erlangType(\type)>};
+
+                analyseType(\type);
+                for (Type v <- vars) {
+                    analyseType(v);
+                }
             }
 
             // (-opaque) type definitions
@@ -133,24 +170,41 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.containment += {<currentModule, typeLoc>};
                 model.names += {<name, physLoc>};
                 model.types += {<typeLoc, erlangType(\type)>};
+
+                analyseType(\type);
+                for (Type v <- vars) {
+                    analyseType(v);
+                }
             }
 
             // (-spec) function
             case functionSpec(_, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
+
+                for (Type s <- signatures) {
+                    analyseType(s);
+                }
             }
 
             // (-spec Mod:Name) remote function
             case functionSpec(_, str modName, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<modName>/<name>/<toString(arity)>|;
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
+
+                for (Type s <- signatures) {
+                    analyseType(s);
+                }
             }
 
             // (-callback) callback spec
             case callbackSpec(_, str name, int arity, list[Type] signatures): {
                 loc funcLoc = |erlang+function:///<currentModName>/<name>/<toString(arity)>|;
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
+
+                for (Type s <- signatures) {
+                    analyseType(s);
+                }
             }
 
             // Warnings and errors
