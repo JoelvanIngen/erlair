@@ -1,10 +1,13 @@
 module examples::Analyses
 
 import IO;
+import List;
 import Set;
+import String;
 import lang::erlang::M3;
 import lang::erlang::analysis::DeadFunctionAnalyser;
 import lang::erlang::analysis::UnusedRecordAnalyser;
+import lang::erlang::analysis::UnusedVariableAnalyser;
 
 void reportDeadFunctions(M3 model) {
     dead = findDeadFunctions(model);
@@ -43,6 +46,21 @@ void reportUnusedRecordsAndFields(M3 model) {
         for (f <- unusedFields) {
             loc physLoc = getOneFrom(model.declarations[f]);
             println(" - Field <f.path> at <physLoc>");
+        }
+    }
+}
+
+void reportUnusedVariables(M3 model) {
+    unused = findUnusedVariables(model);
+    if (isEmpty(unused)) {
+        println("No unused variables found.");
+    } else {
+        println("Found <size(unused)> unused variable(s):");
+        for (v <- unused) {
+            loc physLoc = getOneFrom(model.declarations[v]);
+            parts = [ p | p <- split("/", v.path), p != "" ];
+            str varName = size(parts) > 0 ? parts[size(parts)-1] : v.path;
+            println(" - Variable \'<varName>\' at <physLoc>");
         }
     }
 }
