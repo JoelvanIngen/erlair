@@ -247,7 +247,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         return analyseScope(association, scopeLoc, env);
     }
 
-    void analyseComprehension(str prefix, list[Qualifier] qualifiers, value head, loc scopeLoc, Env env) {
+    void analyseComprehension(str prefix, list[Qualifier] qualifiers, node head, loc scopeLoc, Env env) {
         loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId(prefix)>"];
         env = analyseScope(qualifiers, innerScope, env);
         analyseScope(head, innerScope, env);
