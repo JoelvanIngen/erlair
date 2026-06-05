@@ -41,7 +41,7 @@ Form parseForm(["attribute", value \anno, "record", [str name, list[list[value]]
 Form parseForm(["attribute", value \anno, "type", [str name, list[value] \type, list[list[value]] vars]])
     = typeDecl(parseAnno(\anno), name, parseType(\type), [parseType(v) | v <- vars]);
 Form parseForm(["attribute", value \anno, "opaque", [str name, list[value] \type, list[list[value]] vars]])
-    = typeDecl(parseAnno(\anno), name, parseType(\type), [parseType(v) | v <- vars]);
+    = opaqueDecl(parseAnno(\anno), name, parseType(\type), [parseType(v) | v <- vars]);
 Form parseForm(["attribute", value \anno, "doc", str text])
     = docAttr(parseAnno(\anno), text);
 Form parseForm(["attribute", value \anno, "comment", str text])
