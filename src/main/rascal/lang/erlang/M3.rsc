@@ -275,11 +275,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
 
     // `value` for n should be `node` or `list[node]`
     // TODO: Find out of we can define type unions in Rascal
-    Env analyseScope(value n, loc scopeLoc, Env startingEnv) {
-        Env currentEnv = startingEnv;
-
+    Env analyseScope(value n, loc scopeLoc, Env currentEnv) {
         // We visit root first such that we have the correct function information for subnodes
-        top-down visit(n) {
+        top-down-break visit(n) {
             // Function clauses
             case clause(_, list[Pattern] patterns, GuardSeq guards, Body body): {
                 loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("clause")>"];
@@ -287,7 +285,6 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 innerEnv = analyseScope(patterns, innerScope, innerEnv);
                 innerEnv = analyseScope(guards, innerScope, innerEnv);
                 analyseScope(body, innerScope, innerEnv);
-                fail;
             }
 
             // Anonymous functions
@@ -296,7 +293,6 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 for (Clause c <- clauses) {
                     analyseScope(c, innerScope, currentEnv);
                 }
-                fail;
             }
             case namedFun(Annotation a, str name, list[Clause] clauses): {
                 loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("named_fun")>"];
@@ -310,47 +306,39 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 for (Clause c <- clauses) {
                     analyseScope(c, innerScope, funEnv);
                 }
-                fail;
             }
 
             // Comprehensions
             case lc(_, Expression expr, list[Qualifier] qualifiers): {
                 analyseComprehension("lc", qualifiers, expr, scopeLoc, currentEnv);
-                fail;
             }
             case bc(_, Expression template, list[Qualifier] qualifiers): {
                 analyseComprehension("bc", qualifiers, template, scopeLoc, currentEnv);
-                fail;
             }
             case mc(_, Association association, list[Qualifier] qualifiers): {
                 analyseComprehension("mc", qualifiers, association, scopeLoc, currentEnv);
-                fail;
             }
 
             // Match evaluates RHS first, then binds LHS
             case match(_, Pattern pat, Expression expr): {
                 currentEnv = analyseScope(expr, scopeLoc, currentEnv);
                 currentEnv = analyseScope(pat, scopeLoc, currentEnv);
-                fail;
             }
             case maybeMatch(_, Pattern pat, Expression expr): {
                 currentEnv = analyseScope(expr, scopeLoc, currentEnv);
                 currentEnv = analyseScope(pat, scopeLoc, currentEnv);
-                fail;
             }
 
             // Maybe has its own scope
             case maybe(_, Body body): {
                 loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("maybe")>"];
                 analyseScope(body, innerScope, currentEnv);
-                fail;
             }
             case maybe(_, Body body, _, list[Clause] elseClauses): {
                 loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("maybe")>"];
                 analyseScope(body, innerScope, currentEnv);
                 for (c <- elseClauses)
                     analyseScope(c, innerScope, currentEnv);
-                fail;
             }
 
             // Record instantiation
@@ -359,6 +347,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 for (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) <- fields) {
                     registerFieldUse(fa, name, fn);
                 }
+                currentEnv = analyseScope(fields, scopeLoc, currentEnv);
             }
             // Record field access
             case Expression::recordField(Annotation a, _, str name, Expression field): {
@@ -366,6 +355,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 if (Expression::literal(atom(Annotation fa, str fn)) := field) {
                     registerFieldUse(fa, name, fn);
                 }
+                currentEnv = analyseScope(field, scopeLoc, currentEnv);
             }
             // Record index
             case Expression::recordIndex(Annotation a, str name, Expression field): {
@@ -373,6 +363,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 if (Expression::literal(atom(Annotation fa, str fn)) := field) {
                     registerFieldUse(fa, name, fn);
                 }
+                currentEnv = analyseScope(field, scopeLoc, currentEnv);
             }
             // Record update
             case Expression::recordUpdate(Annotation a, _, str name, list[RecordFieldExpr] fields): {
@@ -380,6 +371,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 for (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) <- fields) {
                     registerFieldUse(fa, name, fn);
                 }
+                currentEnv = analyseScope(fields, scopeLoc, currentEnv);
             }
             // Record pattern match
             case Pattern::record(Annotation a, str name, list[RecordFieldPattern] fields): {
@@ -387,6 +379,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 for (recordFieldPattern(Annotation fa, Pattern::literal(atom(_, str fn)), _) <- fields) {
                     registerFieldUse(fa, name, fn);
                 }
+                currentEnv = analyseScope(fields, scopeLoc, currentEnv);
             }
             // Record index pattern
             case Pattern::recordIndex(Annotation a, str name, Pattern field): {
@@ -394,32 +387,27 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 if (Pattern::literal(atom(Annotation fa, str fn)) := field) {
                     registerFieldUse(fa, name, fn);
                 }
+                currentEnv = analyseScope(field, scopeLoc, currentEnv);
             }
             
             // Generators P <- E evaluate E first, then bind P
             case generate(_, Pattern pat, Expression expr): {
                 currentEnv = analyseGen(pat, expr, scopeLoc, currentEnv);
-                fail;
             }
             case generateStrict(_, Pattern pat, Expression expr): {
                 currentEnv = analyseGen(pat, expr, scopeLoc, currentEnv);
-                fail;
             }
             case bGenerate(_, Pattern pat, Expression expr): {
                 currentEnv = analyseGen(pat, expr, scopeLoc, currentEnv);
-                fail;
             }
             case bGenerateStrict(_, Pattern pat, Expression expr): {
                 currentEnv = analyseGen(pat, expr, scopeLoc, currentEnv);
-                fail;
             }
             case mGenerate(_, Association association, Expression expr): {
                 currentEnv = analyseMGen(association, expr, scopeLoc, currentEnv);
-                fail;
             }
             case mGenerateStrict(_, Association association, Expression expr): {
                 currentEnv = analyseMGen(association, expr, scopeLoc, currentEnv);
-                fail;
             }
 
             // Vars
@@ -461,6 +449,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                     loc callee = resolveLocalCallee(funName, size(args));
                     registerCall(a, callee, scopeLoc);
                 }
+                currentEnv = analyseScope([funExpr, args], scopeLoc, currentEnv);
             }
 
             // Remote funcall
@@ -471,6 +460,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 } else {
                     registerCall(a, |unresolved:///dynamic_call|, scopeLoc);
                 }
+                currentEnv = analyseScope([modExpr, funExpr, args], scopeLoc, currentEnv);
             }
         }
 
