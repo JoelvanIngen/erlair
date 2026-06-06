@@ -74,7 +74,7 @@ str escapeAtom(str s) {
 
 str pMultiLineStr(str s) {
     s = escapeString(s, replaceNewlines=false);
-    s = replaceAll(s, "\n", "\"\n\"");
+    s = replaceAll(s, "\n", "\\n\"\n\"");
     return s;  // Corpus puts explicit verbatism \n after each line for some reason?
 }
 
