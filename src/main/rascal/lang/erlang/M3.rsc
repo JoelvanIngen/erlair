@@ -62,7 +62,6 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             case userType(Annotation a, str typeName, list[Type] args): {
                 loc typeLoc = |erlang+type:///<currentModName>/<typeName>/<toString(size(args))>|;
                 model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
-                fail;
             }
             case remoteType(Annotation a, Type \module, Type name, list[Type] args): {
                 if (Type::literal(atom(_, str moduleName)) := \module
@@ -70,14 +69,12 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                     loc typeLoc = |erlang+type:///<moduleName>/<typeName>/<toString(size(args))>|;
                     model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
                 }
-                fail;
             }
             case record(_, list[Type] fields): {
                 if ([Type::literal(atom(Annotation fa, str recName)), *_] := fields) {
                     loc recLoc = |erlang+record:///<currentModName>/<recName>|;
                     model.uses += {<annoToLoc(fileLoc, fa), recLoc>};
                 }
-                fail;
             }
         }
     }
