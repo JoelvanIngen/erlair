@@ -205,7 +205,7 @@ int opPrec(str operator) {
     else if (operator == "*" || operator == "/" || operator == "div" || operator == "rem" || operator == "band" || operator == "and") return precMult;
     else if (operator == "not" || operator == "bnot") return precUnary;
     else if (operator == "+" || operator == "-") return precUnary;  // Unary +?
-    else if (operator == "andelse") return precOrElse;
+    else if (operator == "orelse") return precOrElse;
     else if (operator == "andalso") return precAndAlso;
     throw "wtf";
 }
