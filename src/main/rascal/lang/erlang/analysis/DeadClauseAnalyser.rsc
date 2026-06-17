@@ -158,9 +158,7 @@ bool exprSubsumes(Expression e1, Expression e2) {
     
     if (e1 is cons, e2 is cons)
         return exprSubsumes(e1.head, e2.head) && exprSubsumes(e1.tail, e2.tail);
-    
-    if (e1 is nil, e2 is nil) return true;
-
+        
     if (e1 is nil, e2 is nil) return true;
 
     // Nil vs Empty String Expression
