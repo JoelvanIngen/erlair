@@ -169,7 +169,7 @@ literal_guard_list_fn(X) when is_list(X) -> ok;
 literal_guard_list_fn([]) -> ok.
 
 literal_guard_binary_fn(X) when is_binary(X) -> ok;
-literal_guard_binary_fn(<<"test">>) -> ok.
+literal_guard_binary_fn(<<"test">>) -> unreachable.
 
 % Nested type guard
 nested_var_to_lit_tuple({X}) when is_integer(X) -> ok;
