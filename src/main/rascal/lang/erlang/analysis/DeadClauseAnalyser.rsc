@@ -113,36 +113,26 @@ bool patternSubsumes(Pattern p1, Pattern p2) {
 
 
     if (p1 is \map, p2 is \map) {
-        for (a1 <- p1.associations) {
-            bool found = false;
-            for (a2 <- p2.associations) {
-                if (equals(a1.key, a2.key) && exprSubsumes(a1.\value, a2.\value)) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) return false;
-        }
-        return true;
+        if (p1.associations == []) return true;
+        return all(
+            a1 <- p1.associations,
+            any(
+                a2 <- p2.associations,
+                equals(a1.key, a2.key) && exprSubsumes(a1.\value, a2.\value)
+            )
+        );
     }
     
     if (p1 is record, p2 is record) {
         if (p1.name != p2.name) return false;
-        for (f1 <- p1.fields) {
-            bool found = false;
-            if (recordFieldPattern(_, Pattern field1, Pattern val1) := f1) {
-                for (f2 <- p2.fields) {
-                    if (recordFieldPattern(_, Pattern field2, Pattern val2) := f2) {
-                        if (equals(field1, field2) && patternSubsumes(val1, val2)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!found) return false;
-        }
-        return true;
+        if (p1.fields == []) return true;
+        return all(
+            f1 <- p1.fields,
+            any(
+                f2 <- p2.fields,
+                equals(f1.field, f2.field) && patternSubsumes(f1.\value, f2.\value)
+            )
+        );
     }
 
     if (p1 is nil, p2 is nil) return true;
