@@ -379,7 +379,7 @@ bool evaluateGuardTest(Expression \test) {
         if (fnName == "is_atom" || fnName == "atom") return lit is atom;
         if (fnName == "is_float" || fnName == "float") return lit is float;
         if (fnName == "is_number" || fnName == "number") return lit is integer || lit is float;
-        if (fnName == "is_list" || fnName == "list") return false;
+        if (fnName == "is_list" || fnName == "list") return lit is string;
         if (fnName == "is_binary" || fnName == "binary") return false;
     }
     return false;
