@@ -160,20 +160,6 @@ bool exprSubsumes(Expression e1, Expression e2) {
         return exprSubsumes(e1.head, e2.head) && exprSubsumes(e1.tail, e2.tail);
     
     if (e1 is nil, e2 is nil) return true;
-    
-    if (e1 is \map, e2 is \map) {
-        for (a1 <- e1.associations) {
-            bool found = false;
-            for (a2 <- e2.associations) {
-                if (equals(a1.key, a2.key) && exprSubsumes(a1.\value, a2.\value)) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) return false;
-        }
-        return true;
-    }
 
     if (e1 is nil, e2 is nil) return true;
 
