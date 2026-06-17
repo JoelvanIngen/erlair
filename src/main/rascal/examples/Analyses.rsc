@@ -4,7 +4,9 @@ import IO;
 import List;
 import Set;
 import String;
+import lang::erlang::AST;
 import lang::erlang::M3;
+import lang::erlang::analysis::DeadClauseAnalyser;
 import lang::erlang::analysis::DeadFunctionAnalyser;
 import lang::erlang::analysis::UnusedRecordAnalyser;
 import lang::erlang::analysis::UnusedVariableAnalyser;
@@ -63,4 +65,18 @@ void reportUnusedVariables(M3 model) {
             println(" - Variable \'<varName>\' at <physLoc>");
         }
     }
+}
+
+str reportDeadClauses(EAF ast) {
+    dead = findDeadClauses(ast);
+    str res = "";
+    if (isEmpty(dead)) {
+        res += "No dead clauses found.";
+    } else {
+        res += "Found <size(dead)> dead clause(s):";
+        for (d <- dead) {
+            res += "\n - Dead clause at <d>";
+        }
+    }
+    return res;
 }
