@@ -1,10 +1,8 @@
 module lang::erlang::analysis::DeadClauseAnalyser
 
-import IO;
 import List;
 import String;
 import lang::erlang::AST;
-import lang::erlang::M3;
 
 map[str, set[str]] SUBSUMES = (
     "is_number":    {"is_integer","integer","is_float","float","is_number","number"},
