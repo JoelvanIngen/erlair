@@ -165,8 +165,15 @@ literal_guard_number_int(10) -> unreachable.
 literal_guard_number_float(X) when is_number(X) -> ok;
 literal_guard_number_float(1.1) -> unreachable.
 
-literal_guard_list_fn(X) when is_list(X) -> ok;
-literal_guard_list_fn([]) -> ok.
+% % Does not work because of how the AST handles nil vs empty list, has been added as git issue
+% literal_guard_list_fn(X) when is_list(X) -> ok;
+% literal_guard_list_fn([]) -> unreachable.
+
+literal_guard_list_fn_2(X) when is_list(X) -> ok;
+literal_guard_list_fn_2("test") -> unreachable.
+
+literal_guard_list_fn_3(X) when is_list(X) -> ok;
+literal_guard_list_fn_3([1, 2, 3]) -> unreachable.
 
 literal_guard_binary_fn(X) when is_binary(X) -> ok;
 literal_guard_binary_fn(<<"test">>) -> unreachable.

@@ -59,8 +59,8 @@ bool clauseSubsumes(Clause c1, Clause c2) {
     varMap = buildVarMapList(c1.patterns, c2.patterns);
     if (guardsSubsume(c1.guards, c2.guards, varMap)) return true;
 
-    varToLitMap = buildVarToLiteralMapList(c1.patterns, c2.patterns);
-    if (evaluateGuardWithLiteral(c1.guards, varToLitMap)) return true;
+    varToExprMap = buildVarToExprMapList(c1.patterns, c2.patterns);
+    if (evaluateGuardWithExpr(c1.guards, varToExprMap)) return true;
 
     return false;
 }
@@ -286,31 +286,31 @@ bool compareSubsumes(Expression t1, Expression t2) {
     return false;
 }
 
-// Creates a map linking variable names in preceding pattern list to literal values in the next pattern list
-map[str, Literal] buildVarToLiteralMapList(list[Pattern] ps1, list[Pattern] ps2) {
-    map[str, Literal] m = ();
+// Creates a map linking variable names in preceding pattern list to Expression values in the next pattern list
+map[str, Expression] buildVarToExprMapList(list[Pattern] ps1, list[Pattern] ps2) {
+    map[str, Expression] m = ();
     if (size(ps1) != size(ps2)) return m;
     for (i <- [0..size(ps1)]) {
-        m = buildVarToLiteralMapPat(ps1[i], ps2[i], m);
+        m = buildVarToExprMapPat(ps1[i], ps2[i], m);
     }
     return m;
 }
 
 // Maps variables in a reference pattern to literals in target pattern
-map[str, Literal] buildVarToLiteralMapPat(Pattern p1, Pattern p2, map[str, Literal] m) {
-    if (p1 is var, p2 is literal) {
-        m[p1.name] = p2.lit;
+map[str, Expression] buildVarToExprMapPat(Pattern p1, Pattern p2, map[str, Expression] m) {
+    if (p1 is var) {
+        m[p1.name] = patternToExpr(p2);
     } else if (p1 is \tuple, p2 is \tuple, size(p1.elements) == size(p2.elements)) {
         for (i <- [0..size(p1.elements)]) {
-            m = buildVarToLiteralMapPat(p1.elements[i], p2.elements[i], m);
+            m = buildVarToExprMapPat(p1.elements[i], p2.elements[i], m);
         }
     } else if (p1 is cons, p2 is cons) {
-        m = buildVarToLiteralMapPat(p1.head, p2.head, m);
-        m = buildVarToLiteralMapPat(p1.tail, p2.tail, m);
+        m = buildVarToExprMapPat(p1.head, p2.head, m);
+        m = buildVarToExprMapPat(p1.tail, p2.tail, m);
     } else if (p1 is \map, p2 is \map) {
         for (a1 <- p1.associations, a2 <- p2.associations) {
             if (equals(a1.key, a2.key)) {
-                m = buildVarToLiteralMapExpr(a1.\value, a2.\value, m);
+                m = buildVarToExprMapExpr(a1.\value, a2.\value, m);
             }
         }
     } else if (p1 is record, p2 is record) {
@@ -320,7 +320,7 @@ map[str, Literal] buildVarToLiteralMapPat(Pattern p1, Pattern p2, map[str, Liter
                     for (f2 <- p2.fields) {
                         if (recordFieldPattern(_, Pattern field2, Pattern val2) := f2) {
                             if (equals(field1, field2)) {
-                                m = buildVarToLiteralMapPat(val1, val2, m);
+                                m = buildVarToExprMapPat(val1, val2, m);
                             }
                         }
                     }
@@ -328,43 +328,67 @@ map[str, Literal] buildVarToLiteralMapPat(Pattern p1, Pattern p2, map[str, Liter
             }
         }
     } else if (p1 is match) {
-        m = buildVarToLiteralMapPat(p1.lhs, p2, m);
-        m = buildVarToLiteralMapPat(p1.rhs, p2, m);
+        m = buildVarToExprMapPat(p1.lhs, p2, m);
+        m = buildVarToExprMapPat(p1.rhs, p2, m);
     } else if (p2 is match) {
-        m = buildVarToLiteralMapPat(p1, p2.lhs, m);
-        m = buildVarToLiteralMapPat(p1, p2.rhs, m);
-    }
-    return m;
-}
-
-map[str, Literal] buildVarToLiteralMapExpr(Expression e1, Expression e2, map[str, Literal] m) {
-    if (e1 is var, e2 is literal) {
-        m[e1.name] = e2.lit;
-    } else if (e1 is \tuple, e2 is \tuple, size(e1.elements) == size(e2.elements)) {
-        for (i <- [0..size(e1.elements)]) {
-            m = buildVarToLiteralMapExpr(e1.elements[i], e2.elements[i], m);
-        }
-    } else if (e1 is cons, e2 is cons) {
-        m = buildVarToLiteralMapExpr(e1.head, e2.head, m);
-        m = buildVarToLiteralMapExpr(e1.tail, e2.tail, m);
-    } else if (e1 is \map, e2 is \map) {
-        for (a1 <- e1.associations, a2 <- e2.associations) {
-            if (equals(a1.key, a2.key)) {
-                m = buildVarToLiteralMapExpr(a1.\value, a2.\value, m);
+        m = buildVarToExprMapPat(p1, p2.lhs, m);
+        m = buildVarToExprMapPat(p1, p2.rhs, m);
+    } else if (p1 is bitstring, p2 is bitstring) {
+        if (size(p1.binElements) == size(p2.binElements)) {
+            for (i <- [0..size(p1.binElements)]) {
+                m = buildVarToExprMapPat(p1.binElements[i].\value, p2.binElements[i].\value, m);
             }
         }
     }
     return m;
 }
 
-// Substitutes variables with literal values for comparison
-bool evaluateGuardWithLiteral(GuardSeq g, map[str, Literal] varToLiteral) {
+map[str, Expression] buildVarToExprMapExpr(Expression e1, Expression e2, map[str, Expression] m) {
+    if (e1 is var) {
+        m[e1.name] = e2;
+    } else if (e1 is \tuple, e2 is \tuple, size(e1.elements) == size(e2.elements)) {
+        for (i <- [0..size(e1.elements)]) {
+            m = buildVarToExprMapExpr(e1.elements[i], e2.elements[i], m);
+        }
+    } else if (e1 is cons, e2 is cons) {
+        m = buildVarToExprMapExpr(e1.head, e2.head, m);
+        m = buildVarToExprMapExpr(e1.tail, e2.tail, m);
+    } else if (e1 is \map, e2 is \map) {
+        for (a1 <- e1.associations, a2 <- e2.associations) {
+            if (equals(a1.key, a2.key)) {
+                m = buildVarToExprMapExpr(a1.\value, a2.\value, m);
+            }
+        }
+    }
+    return m;
+}
+
+// Helper to convert a Pattern node into its matching Expression representation
+Expression patternToExpr(Pattern p) {
+    switch (p) {
+        case Pattern::literal(Literal lit): return Expression::literal(lit);
+        case Pattern::nil(Annotation a): return Expression::nil(a);
+        case Pattern::cons(Annotation a, Pattern h, Pattern t): 
+            return Expression::cons(a, patternToExpr(h), patternToExpr(t));
+        case Pattern::\tuple(Annotation a, list[Pattern] elements):
+            return Expression::\tuple(a, [patternToExpr(e) | e <- elements]);
+        case Pattern::\map(Annotation a, list[Association] associations):
+            return Expression::\map(a, associations);
+        case Pattern::bitstring(Annotation a, list[BinaryElementPattern] binElements):
+            return Expression::bin(a, [binElementExpr(ae, patternToExpr(ve), s, t) | binElementPatt(ae, ve, s, t) <- binElements]);
+        default:
+            return Expression::var(\anno(0,0), "_");
+    }
+}
+
+// Substitutes variables with Expression values for comparison
+bool evaluateGuardWithExpr(GuardSeq g, map[str, Expression] varToExpr) {
     if (g == []) return true;
     
     gSubst = visit(g) {
         case Expression::var(_, str name): {
-            if (name in varToLiteral) {
-                insert Expression::literal(varToLiteral[name]);
+            if (name in varToExpr) {
+                insert varToExpr[name];
             }
         }
     };
@@ -372,15 +396,18 @@ bool evaluateGuardWithLiteral(GuardSeq g, map[str, Literal] varToLiteral) {
     return any(guard <- gSubst, all(\test <- guard, evaluateGuardTest(\test)));
 }
 
-// Evaluate built-in type guards on a literal
+// Evaluate built-in type guards on expresions
 bool evaluateGuardTest(Expression \test) {
-    if (call(_, literal(atom(_, str fnName)), [Expression::literal(Literal lit)]) := \test) {
-        if (fnName == "is_integer" || fnName == "integer") return lit is integer;
-        if (fnName == "is_atom" || fnName == "atom") return lit is atom;
-        if (fnName == "is_float" || fnName == "float") return lit is float;
-        if (fnName == "is_number" || fnName == "number") return lit is integer || lit is float;
-        if (fnName == "is_list" || fnName == "list") return lit is string;
-        if (fnName == "is_binary" || fnName == "binary") return false;
+    if (call(_, literal(atom(_, str fnName)), [Expression arg]) := \test) {
+        if (fnName == "is_integer" || fnName == "integer") return literal(integer(_, _)) := arg;
+        if (fnName == "is_atom" || fnName == "atom") return literal(atom(_, _)) := arg;
+        if (fnName == "is_float" || fnName == "float") return literal(float(_, _)) := arg;
+        if (fnName == "is_number" || fnName == "number") return literal(integer(_, _)) := arg || literal(float(_, _)) := arg;
+        if (fnName == "is_list" || fnName == "list") {
+            if (nil(_) := arg || cons(_, _, _) := arg) return true;
+            return Expression::literal(Literal lit) := arg && lit is string;
+        }
+        if (fnName == "is_binary" || fnName == "binary") return bin(_, _) := arg;
     }
     return false;
 }
