@@ -6,6 +6,13 @@ import String;
 import lang::erlang::AST;
 import lang::erlang::M3;
 
+map[str, set[str]] SUBSUMES = (
+    "is_number":    {"is_integer","integer","is_float","float","is_number","number"},
+    "number":       {"is_integer","integer","is_float","float","is_number","number"},
+    "is_bitstring": {"is_binary","binary","is_bitstring","bitstring"},
+    "bitstring":    {"is_binary","binary","is_bitstring","bitstring"}
+);
+
 // Normalise source locations
 private Annotation mockAnno = \anno(0, 0);
 private &T stripAnnos(&T nodeValue)
@@ -272,12 +279,7 @@ bool guardTestSubsumes(Expression t1, Expression t2) {
         call(_, literal(atom(_, str fn2)), [Expression v2]) := t2,
         stripAnnos(v1) == stripAnnos(v2)) {
         
-        if (fn1 == "is_number" || fn1 == "number") {
-            return fn2 in {"is_integer", "integer", "is_float", "float", "is_number", "number"};
-        }
-        if (fn1 == "is_bitstring" || fn1 == "bitstring") {
-            return fn2 in {"is_binary", "binary", "is_bitstring", "bitstring"};
-        }
+        if (fn1 in SUBSUMES) return fn2 in SUBSUMES[fn1];
     }
     
     return false;
