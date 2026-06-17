@@ -135,8 +135,6 @@ bool patternSubsumes(Pattern p1, Pattern p2) {
         );
     }
 
-    if (p1 is nil, p2 is nil) return true;
-
     // Nil vs Empty String Pattern
     if (p1 is nil, p2 is literal)
         return p2.lit is string && p2.lit.\value == "";
@@ -158,7 +156,7 @@ bool exprSubsumes(Expression e1, Expression e2) {
     
     if (e1 is cons, e2 is cons)
         return exprSubsumes(e1.head, e2.head) && exprSubsumes(e1.tail, e2.tail);
-        
+
     if (e1 is nil, e2 is nil) return true;
 
     // Nil vs Empty String Expression
