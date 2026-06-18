@@ -46,7 +46,7 @@ set[Annotation] findDeadClauses(EAF ast) {
 
 // Loops through clauses and identifies and returns any clause that is subsumed by any earlier clause
 set[Annotation] checkClauses(list[Clause] clauses) {
-    if (size(clauses) < 1) return {};
+    if (isEmpty(clauses)) return {};
     return {
         clauses[i].\anno |
         i <- [1 .. size(clauses)],
@@ -71,7 +71,7 @@ bool clauseSubsumes(Clause c1, Clause c2) {
 // All need to subsume sequentially
 bool patternsSubsume(list[Pattern] ps1, list[Pattern] ps2) {
     if (size(ps1) != size(ps2)) return false;
-    if (size(ps1) == 0) return true;
+    if (isEmpty(ps1)) return true;
     return all(i <- [0..size(ps1)], patternSubsumes(ps1[i], ps2[i]));
 }
 
@@ -113,7 +113,7 @@ bool patternSubsumes(Pattern p1, Pattern p2) {
 
 
     if (p1 is \map, p2 is \map) {
-        if (p1.associations == []) return true;
+        if (isEmpty(p1.associations)) return true;
         return all(
             a1 <- p1.associations,
             any(
@@ -125,7 +125,7 @@ bool patternSubsumes(Pattern p1, Pattern p2) {
     
     if (p1 is record, p2 is record) {
         if (p1.name != p2.name) return false;
-        if (p1.fields == []) return true;
+        if (isEmpty(p1.fields)) return true;
         return all(
             f1 <- p1.fields,
             any(
@@ -228,7 +228,7 @@ map[str, str] buildVarMapExpr(Expression e1, Expression e2, map[str, str] curren
 
 // Checks if guard 1 subsumes guard 2
 bool guardsSubsume(GuardSeq g1, GuardSeq g2, map[str, str] varMap) {
-    if (g1 == []) return true;
+    if (isEmpty(g1)) return true;
     
     g2Renamed = renameGuardSeq(g2, varMap);
     if (stripAnnos(g1) == stripAnnos(g2Renamed)) return true;
@@ -381,7 +381,7 @@ Expression patternToExpr(Pattern p) {
 
 // Substitutes variables with Expression values for comparison
 bool evaluateGuardWithExpr(GuardSeq g, map[str, Expression] varToExpr) {
-    if (g == []) return true;
+    if (isEmpty(g)) return true;
     
     gSubst = visit(g) {
         case Expression::var(_, str name): {
