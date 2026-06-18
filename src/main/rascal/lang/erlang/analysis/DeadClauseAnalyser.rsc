@@ -267,16 +267,17 @@ bool compareSubsumes(Expression t1, Expression t2) {
             
         int v1 = toInt(val1Str);
         int v2 = toInt(val2Str);
-        
-        if (op1 == "\>=", op2 == "\>") return v1 <= v2;
-        if (op1 == "\>=", op2 == "\>=") return v1 <= v2;
-        if (op1 == "\>", op2 == "\>") return v1 <= v2;
-        if (op1 == "\>", op2 == "\>=") return v1 < v2;
-        
-        if (op1 == "=\<", op2 == "\<") return v1 >= v2;
-        if (op1 == "=\<", op2 == "=\<") return v1 >= v2;
-        if (op1 == "\<", op2 == "\<") return v1 >= v2;
-        if (op1 == "\<", op2 == "=\<") return v1 > v2;
+
+        switch (<op1, op2>) {
+            case <"\>=", "\>">:  return v1 <= v2;
+            case <"\>=", "\>=">: return v1 <= v2;
+            case <"\>",  "\>">:  return v1 <= v2;
+            case <"\>",  "\>=">: return v1 < v2;
+            case <"=\<", "\<">:  return v1 >= v2;
+            case <"=\<", "=\<">: return v1 >= v2;
+            case <"\<",  "\<">:  return v1 >= v2;
+            case <"\<",  "=\<">: return v1 > v2;
+        }
     }
     return false;
 }
