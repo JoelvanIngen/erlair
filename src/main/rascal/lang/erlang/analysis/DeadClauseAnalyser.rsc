@@ -4,6 +4,8 @@ import List;
 import String;
 import lang::erlang::AST;
 
+// Map to find which functions are subsumed by which functions
+// Key subsumes items
 map[str, set[str]] SUBSUMES = (
     "is_number":    {"is_integer","integer","is_float","float","is_number","number"},
     "number":       {"is_integer","integer","is_float","float","is_number","number"},
