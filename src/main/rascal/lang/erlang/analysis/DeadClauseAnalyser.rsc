@@ -261,26 +261,22 @@ GuardSeq renameGuardSeq(GuardSeq gs, map[str, str] varMap)
 
 // Compares two relational operations to defermine subsumption
 bool compareSubsumes(Expression t1, Expression t2) {
-    if (op(Annotation _, str op1, Expression lhs1, Expression rhs1) := t1,
-        op(Annotation _, str op2, Expression lhs2, Expression rhs2) := t2,
+    if (op(Annotation _, str op1, Expression lhs1, Expression::literal(integer(_, str val1Str))) := t1,
+        op(Annotation _, str op2, Expression lhs2, Expression::literal(integer(_, str val2Str))) := t2,
         equals(lhs1, lhs2)) {
+            
+        int v1 = toInt(val1Str);
+        int v2 = toInt(val2Str);
         
-        if (literal(integer(_, str val1Str)) := rhs1,
-            literal(integer(_, str val2Str)) := rhs2) {
-            
-            int v1 = toInt(val1Str);
-            int v2 = toInt(val2Str);
-            
-            if (op1 == "\>=", op2 == "\>") return v1 <= v2;
-            if (op1 == "\>=", op2 == "\>=") return v1 <= v2;
-            if (op1 == "\>", op2 == "\>") return v1 <= v2;
-            if (op1 == "\>", op2 == "\>=") return v1 < v2;
-            
-            if (op1 == "=\<", op2 == "\<") return v1 >= v2;
-            if (op1 == "=\<", op2 == "=\<") return v1 >= v2;
-            if (op1 == "\<", op2 == "\<") return v1 >= v2;
-            if (op1 == "\<", op2 == "=\<") return v1 > v2;
-        }
+        if (op1 == "\>=", op2 == "\>") return v1 <= v2;
+        if (op1 == "\>=", op2 == "\>=") return v1 <= v2;
+        if (op1 == "\>", op2 == "\>") return v1 <= v2;
+        if (op1 == "\>", op2 == "\>=") return v1 < v2;
+        
+        if (op1 == "=\<", op2 == "\<") return v1 >= v2;
+        if (op1 == "=\<", op2 == "=\<") return v1 >= v2;
+        if (op1 == "\<", op2 == "\<") return v1 >= v2;
+        if (op1 == "\<", op2 == "=\<") return v1 > v2;
     }
     return false;
 }
