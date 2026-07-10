@@ -1,6 +1,7 @@
 module lang::erlang::Parser
 
 import IO;
+import String;
 import lang::erlang::AST;
 import lang::erlang::ErlangImporter;
 
@@ -68,8 +69,8 @@ default RecordField parseRecordField(value v) = unrecognised(#RecordField, v);
 
 Literal parseLiteral(["atom", value \anno, str v])
     = atom(parseAnno(\anno), v);
-Literal parseLiteral(["char", value \anno, str v])
-    = char(parseAnno(\anno), v);
+Literal parseLiteral(["char", value \anno, int v])
+    = char(parseAnno(\anno), stringChar(v));
 Literal parseLiteral(["float", value \anno, str v])
     = float(parseAnno(\anno), v);
 Literal parseLiteral(["integer", value \anno, int v])
