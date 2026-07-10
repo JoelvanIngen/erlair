@@ -1,6 +1,7 @@
 module lang::erlang::Loader
 
 import IO;
+import Set;
 import lang::erlang::AST;
 import lang::erlang::ParseFile;
 import lang::erlang::Parser;
@@ -24,14 +25,17 @@ list[EAF] loadProjectASTs(loc rootFolder, loc includeDir = |unknown:///|) {
     set[loc] sources = findErlangFiles(rootFolder);
     list[EAF] projectASTs = [];
 
+    nTotal = size(sources);
+    int i = 0;
     for (loc file <- sources) {
+        i += 1;
         try {
             loc currentInclude = (includeDir == |unknown:///|) ? file.parent : includeDir;
             str rawAst = getAstJSON(file, currentInclude);
             projectASTs += [parseErlangAST(rawAst)];
-            println("Parsed: <file.path>");
+            println("<i>/<nTotal> :: Parsed: <file.path>");
         } catch value e: {
-            println("Error parsing <file.path>: <e>");
+            println("<i>/<nTotal> :: Error parsing <file.path>: <e>");
         }
     }
     return projectASTs;
