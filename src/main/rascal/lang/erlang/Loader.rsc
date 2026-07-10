@@ -30,9 +30,8 @@ list[EAF] loadProjectASTs(loc rootFolder, loc includeDir = |unknown:///|) {
             str rawAst = getAstJSON(file, currentInclude);
             projectASTs += [parseErlangAST(rawAst)];
             println("Parsed: <file.path>");
-        } catch: {
-            println("Error parsing <file.path>:");
-            throw;
+        } catch value e: {
+            println("Error parsing <file.path>: <e>");
         }
     }
     return projectASTs;
