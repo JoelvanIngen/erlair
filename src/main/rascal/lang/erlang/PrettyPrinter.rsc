@@ -242,7 +242,7 @@ str showExprNoParens(receive(_, clauses, timeoutExpr, timeoutBody)) =
 str showExprNoParens(\try(_, body, caseClauses, catchClauses, afterBody)) =
     "try\n" + showBody(body) +
     (caseClauses != [] ? " of\n" + j(";\n", [showClause("", c, false) | c <- caseClauses]) : "") +
-    (catchClauses != [] ? " catch\n" + j(";\n", [showClause("", c, false) | c <- catchClauses]) : "") +
+    (catchClauses != [] ? " catch\n" + j(";\n", [showCatchClause(c) | c <- catchClauses]) : "") +
     (afterBody != [] ? " after\n" + showBody(afterBody) : "") +
     "\nend";
 str showExprNoParens(Expression::match(_, pat, rhs)) = "<pPattern(pat)> = <pExpr(rhs, precMatch-1)>";
@@ -256,6 +256,42 @@ str showExprNoParens(Expression::op(_, operator, operand)) =  // Unary
     operator == "+" || operator == "-" ? "<operator><pExpr(operand, precUnary-1)>" : "<operator> <pExpr(operand, precUnary-1)>";
 default str showExprNoParens(Expression e) {
     throw "PrettyPrinter: unexpected Expression <e>";
+}
+
+str showCatchClause(Clause clause) {
+    patterns = clause.patterns;
+    guards = clause.guards;
+    body = clause.body;
+    
+    str patStr = "";
+    if ([Pattern::\tuple(_, [Pattern class, Pattern exceptionPattern, Pattern stacktrace])] := patterns) {
+        patStr = pCatchPattern(class, exceptionPattern, stacktrace);
+    } else {
+        patStr = j(", ", [pPattern(p) | p <- patterns]);
+    }
+    
+    guardStr = showGuards(guards);
+    bodyStr = showBody(body);
+    return "<patStr><guardStr> -\> <bodyStr>";
+}
+
+str pCatchPattern(Pattern class, Pattern exceptionPattern, Pattern stacktrace) {
+    str classStr = pPattern(class);
+    str patternStr = pPattern(exceptionPattern);
+    str stacktraceStr = pPattern(stacktrace);
+    
+    bool isDefaultThrow = (Pattern::literal(atom(_, "throw")) := class);
+    bool hasNoStacktrace = (Pattern::var(_, "_") := stacktrace);
+    
+    if (hasNoStacktrace) {
+        if (isDefaultThrow) {
+            return patternStr;
+        } else {
+            return "<classStr>:<patternStr>";
+        }
+    } else {
+        return "<classStr>:<patternStr>:<stacktraceStr>";
+    }
 }
 
 str pList(Expression head, Expression tail) {
