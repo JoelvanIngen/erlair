@@ -88,7 +88,7 @@ Pattern parsePattern(["bin", value \anno, list[list[value]] binElements])
 Pattern parsePattern(["match", value \anno, list[value] lhs, list[value] rhs])
     = Pattern::match(parseAnno(\anno), parsePattern(lhs), parsePattern(rhs));
 Pattern parsePattern(["cons", value \anno, list[value] head, list[value] tail])
-    = cons(parseAnno(\anno), parsePattern(head), parsePattern(tail));
+    = Pattern::cons(parseAnno(\anno), parsePattern(head), parsePattern(tail));
 Pattern parsePattern(["map", value \anno, list[list[value]] associations])
     = Pattern::\map(parseAnno(\anno), [parseAssociation(a) | a <- associations]);
 Pattern parsePattern(["nil", value \anno])
@@ -98,11 +98,11 @@ Pattern parsePattern(["op", value \anno, str operator, list[value] operand])
 Pattern parsePattern(["op", value \anno, str operator, list[value] lhs, list[value] rhs])
     = Pattern::op(parseAnno(\anno), operator, parsePattern(lhs), parsePattern(rhs));
 Pattern parsePattern(["record_index", value \anno, str name, list[value] field])
-    = recordIndex(parseAnno(\anno), name, parsePattern(field));
+    = Pattern::recordIndex(parseAnno(\anno), name, parsePattern(field));
 Pattern parsePattern(["record", value \anno, str name, list[list[value]] fields])
-    = record(parseAnno(\anno), name, [parseRecordFieldPattern(f) | f <- fields]);
+    = Pattern::record(parseAnno(\anno), name, [parseRecordFieldPattern(f) | f <- fields]);
 Pattern parsePattern(["tuple", value \anno, list[list[value]] elements])
-    = \tuple(parseAnno(\anno), [parsePattern(e) | e <- elements]);
+    = Pattern::\tuple(parseAnno(\anno), [parsePattern(e) | e <- elements]);
 Pattern parsePattern(["var", value \anno, str name])
     = Pattern::var(parseAnno(\anno), name);
 default Pattern parsePattern(value v) = unrecognised(#Pattern, v);
@@ -121,7 +121,7 @@ Expression parseExpr(["case", value \anno, list[value] expr, list[list[value]] c
 Expression parseExpr(["catch", value \anno, list[value] expr])
     = \catch(parseAnno(\anno), parseExpr(expr));
 Expression parseExpr(["cons", value \anno, list[value] head, list[value] tail])
-    = cons(parseAnno(\anno), parseExpr(head), parseExpr(tail));
+    = Expression::cons(parseAnno(\anno), parseExpr(head), parseExpr(tail));
 Expression parseExpr(["fun", value \anno, ["function", str name, int arity]])
     = funDecl(parseAnno(\anno), name, arity);
 Expression parseExpr(["fun", value \anno, ["function", list[value] \module, list[value] name, list[value] arity]])
@@ -146,7 +146,7 @@ Expression parseExpr(["map", value \anno, list[list[value]] associations])
 Expression parseExpr(["map", value \anno, list[value] expr, list[list[value]] associations])
     = mapUpdate(parseAnno(\anno), parseExpr(expr), [parseAssociation(a) | a <- associations]);
 Expression parseExpr(["match", value \anno, list[value] pattern, list[value] expr])
-    = match(parseAnno(\anno), parsePattern(pattern), parseExpr(expr));
+    = Expression::match(parseAnno(\anno), parsePattern(pattern), parseExpr(expr));
 Expression parseExpr(["maybe_match", value \anno, list[value] pattern, list[value] expr])
     = maybeMatch(parseAnno(\anno), parsePattern(pattern), parseExpr(expr));
 Expression parseExpr(["maybe", value \anno, list[list[value]] body])
@@ -156,24 +156,24 @@ Expression parseExpr(["maybe", value \anno, list[list[value]] body, ["else", val
 Expression parseExpr(["nil", value \anno])
     = Expression::nil(parseAnno(\anno));
 Expression parseExpr(["op", value \anno, str operator, list[value] lhs, list[value] rhs])
-    = op(parseAnno(\anno), operator, parseExpr(lhs), parseExpr(rhs))
+    = Expression::op(parseAnno(\anno), operator, parseExpr(lhs), parseExpr(rhs))
     when operator != "=";  // Might be redundant but including for now just in case
 Expression parseExpr(["op", value \anno, str operator, list[value] operand])
-    = op(parseAnno(\anno), operator, parseExpr(operand));
+    = Expression::op(parseAnno(\anno), operator, parseExpr(operand));
 Expression parseExpr(["receive", value \anno, list[list[value]] clauses])
     = receive(parseAnno(\anno), [parseClause(c) | c <- clauses]);
 Expression parseExpr(["receive", value \anno, list[list[value]] clauses, list[value] timeoutExpr, list[list[value]] timeoutBody])
     = receive(parseAnno(\anno), [parseClause(c) | c <- clauses], parseExpr(timeoutExpr), [parseExpr(e) | e <- timeoutBody]);
 Expression parseExpr(["record", value \anno, str name, list[list[value]] fields])
-    = record(parseAnno(\anno), name, [parseRecordFieldExpr(f) | f <- fields]);
+    = Expression::record(parseAnno(\anno), name, [parseRecordFieldExpr(f) | f <- fields]);
 Expression parseExpr(["record_field", value \anno, list[value] expr, str name, list[value] field])
     = recordField(parseAnno(\anno), parseExpr(expr), name, parseExpr(field));
 Expression parseExpr(["record_index", value \anno, str name, list[value] field])
-    = recordIndex(parseAnno(\anno), name, parseExpr(field));
+    = Expression::recordIndex(parseAnno(\anno), name, parseExpr(field));
 Expression parseExpr(["record", value \anno, list[value] expr, str name, list[list[value]] fields])
     = recordUpdate(parseAnno(\anno), parseExpr(expr), name, [parseRecordFieldExpr(f) | f <- fields]);
 Expression parseExpr(["tuple", value \anno, list[list[value]] elements])
-    = \tuple(parseAnno(\anno), [parseExpr(e) | e <- elements]);
+    = Expression::\tuple(parseAnno(\anno), [parseExpr(e) | e <- elements]);
 Expression parseExpr(["try", value \anno, list[list[value]] body, list[list[value]] caseClauses, list[list[value]] catchClauses, list[list[value]] afterBody])
     = \try(parseAnno(\anno), [parseExpr(e) | e <- body], [parseClause(c) | c <- caseClauses], [parseClause(c) | c <- catchClauses], [parseExpr(e) | e <- afterBody]);
 Expression parseExpr(["var", value \anno, str name])
