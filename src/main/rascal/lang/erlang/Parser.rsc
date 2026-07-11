@@ -80,6 +80,8 @@ Literal parseLiteral(["integer", value \anno, str v])
     = integer(parseAnno(\anno), v);
 Literal parseLiteral(["string", value \anno, str v])
     = string(parseAnno(\anno), v);
+Literal parseLiteral(["string", value \anno, list[value] ints])
+    = string(parseAnno(\anno), stringChars([ i | int i <- ints ]));
 Literal parseLiteral(["string", value \anno, []])
     = string(parseAnno(\anno), "");
 default Literal parseLiteral(value v) = unrecognised(#Literal, v);
