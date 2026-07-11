@@ -76,6 +76,8 @@ Literal parseLiteral(["float", value \anno, str v])
     = float(parseAnno(\anno), v);
 Literal parseLiteral(["integer", value \anno, int v])
     = integer(parseAnno(\anno), "<v>");
+Literal parseLiteral(["integer", value \anno, str v])
+    = integer(parseAnno(\anno), v);
 Literal parseLiteral(["string", value \anno, str v])
     = string(parseAnno(\anno), v);
 Literal parseLiteral(["string", value \anno, []])
