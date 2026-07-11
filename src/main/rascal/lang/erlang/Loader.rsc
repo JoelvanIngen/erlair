@@ -33,9 +33,9 @@ list[EAF] loadProjectASTs(loc rootFolder, loc includeDir = |unknown:///|) {
             loc currentInclude = (includeDir == |unknown:///|) ? file.parent : includeDir;
             str rawAst = getAstJSON(file, currentInclude);
             projectASTs += [parseErlangAST(rawAst)];
-            println("<i>/<nTotal> :: Parsed: <file.path>");
+            println("<i>/<nTotal> :: Parsed: <rootFolder + file.path>");
         } catch value e: {
-            println("<i>/<nTotal> :: Error parsing <file.path>: <e>");
+            println("<i>/<nTotal> :: Error parsing <rootFolder + file.path>: <e>");
         }
     }
     return projectASTs;
