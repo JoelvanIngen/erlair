@@ -14,7 +14,7 @@ alias GuardSeq = list[Guard];  // OR (semicolon)
 
 // Locations in code
 data Annotation
-    = \anno(int line, int column, bool generated = false)
+    = \anno(int line, int column, bool generated = false, str text = "")
     ;
 
 // Top-level; covers: module attributes, exports, imports, function decls, record defs, type defs/specs
