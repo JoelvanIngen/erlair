@@ -292,7 +292,8 @@ default OptTypeSpecs parseOptTypeSpecs(value v) = unrecognised(#OptTypeSpecs, v)
 
 TypeSpec parseTypeSpec(str name)
     = typeSpec(name);
-// typeSpec(str name, int \value)  // Such as {unit, 8}
+TypeSpec parseTypeSpec([str name, int \value])  // Such as {unit, 8}
+    = typeSpec(name, \value);
 default TypeSpec parseTypeSpec(value v) = unrecognised(#TypeSpec, v);
 
 RecordFieldPattern parseRecordFieldPattern(["record_field", value \anno, list[value] field, list[value] \value])
