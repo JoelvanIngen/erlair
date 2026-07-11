@@ -19,6 +19,7 @@ EAF parseErlangAST(str rawJSON) {
 Annotation parseAnno(int line) = \anno(line, 0);
 Annotation parseAnno([int line, int column]) = \anno(line, column);
 Annotation parseAnno([["generated", "true"], ["location", [int line, int column]]]) = \anno(line, column, generated=true);  // Separate functions for generated:true/false to avoid str->bool conv boilerplate
+Annotation parseAnno([["text", str text], ["location", [int line, int column]]]) = \anno(line, column, text=text);
 default Annotation parseAnno(value v) = unrecognised(#Annotation, v);
 
 Form parseForm(["attribute", value \anno, "export", list[list[value]] exports])
