@@ -18,7 +18,7 @@ main([Filename, IncludeDir]) ->
 % so here's an encoder just complete enough for the Erlang Abstract Format
 to_json(Atom) when is_atom(Atom) ->
     % Make atoms into string
-    "\"" ++ atom_to_list(Atom) ++ "\"";
+    "\"" ++ escape_string(atom_to_list(Atom)) ++ "\"";
 to_json(Int) when is_integer(Int) ->
     integer_to_list(Int);
 to_json(Float) when is_float(Float) ->
