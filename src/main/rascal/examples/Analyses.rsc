@@ -11,29 +11,33 @@ import lang::erlang::analysis::DeadFunctionAnalyser;
 import lang::erlang::analysis::UnusedRecordAnalyser;
 import lang::erlang::analysis::UnusedVariableAnalyser;
 
-void reportDeadFunctions(M3 model) {
+str reportDeadFunctions(M3 model) {
     dead = findDeadFunctions(model);
+    res = "";
     if (isEmpty(dead)) {
-        println("No dead functions found.");
+        res += "No dead functions found.";
     } else {
-        println("Found <size(dead)> dead function(s):");
+        res += "Found <size(dead)> dead function(s):";
         for (f <- dead) {
             loc physLoc = getOneFrom(model.declarations[f]);
-            println(" - <f.path> at <physLoc>");
+            res += " - <f.path> at <physLoc>";
         }
     }
+    return res;
 }
 
-void reportUnusedRecordsAndFields(M3 model) {
+str reportUnusedRecordsAndFields(M3 model) {
+    res = "";
+
     // Unused Records
     unusedRecords = findUnusedRecords(model);
     if (isEmpty(unusedRecords)) {
-        println("No unused records found.");
+        res += "No unused records found.";
     } else {
-        println("Found <size(unusedRecords)> unused record(s):");
+        res += "Found <size(unusedRecords)> unused record(s):";
         for (r <- unusedRecords) {
             loc physLoc = getOneFrom(model.declarations[r]);
-            println(" - Record <r.path> at <physLoc>");
+            res += " - Record <r.path> at <physLoc>";
         }
     }
 
@@ -42,29 +46,33 @@ void reportUnusedRecordsAndFields(M3 model) {
     // Unused Fields in Used Records
     unusedFields = findUnusedFieldsOfUsedRecords(model);
     if (isEmpty(unusedFields)) {
-        println("No unused fields found in active records.");
+        res += "No unused fields found in active records.";
     } else {
-        println("Found <size(unusedFields)> unused field(s) within active records:");
+        res += "Found <size(unusedFields)> unused field(s) within active records:";
         for (f <- unusedFields) {
             loc physLoc = getOneFrom(model.declarations[f]);
-            println(" - Field <f.path> at <physLoc>");
+            res += " - Field <f.path> at <physLoc>";
         }
     }
+
+    return res;
 }
 
-void reportUnusedVariables(M3 model) {
+str reportUnusedVariables(M3 model) {
     unused = findUnusedVariables(model);
+    res = "";
     if (isEmpty(unused)) {
-        println("No unused variables found.");
+        res += "No unused variables found.";
     } else {
-        println("Found <size(unused)> unused variable(s):");
+        res += "Found <size(unused)> unused variable(s):";
         for (v <- unused) {
             loc physLoc = getOneFrom(model.declarations[v]);
             parts = [ p | p <- split("/", v.path), p != "" ];
             str varName = size(parts) > 0 ? parts[size(parts)-1] : v.path;
-            println(" - Variable \'<varName>\' at <physLoc>");
+            res += " - Variable \'<varName>\' at <physLoc>";
         }
     }
+    return res;
 }
 
 str reportDeadClauses(EAF ast) {
