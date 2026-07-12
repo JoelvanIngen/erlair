@@ -37,7 +37,10 @@ to_json(List) when is_list(List) ->
     case is_string(List) of
         true  -> "\"" ++ escape_string(List) ++ "\"";
         false -> to_json_array(List)
-    end.
+    end;
+to_json(Other) ->
+    % Fallback for other arbitrary types
+    "\"" ++ escape_string(lists:flatten(io_lib:format("~p", [Other]))) ++ "\"".
 
 to_json_array(List) ->
     "[" ++ string:join([to_json(E) || E <- List], ",") ++ "]".
