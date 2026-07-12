@@ -1,6 +1,9 @@
 % Usage: escript extract_ast.escript <file.erl> <include_dir>
 
 main([Filename, IncludeDir]) ->
+    % Force raw UTF-8 output instead of latin1 escapes
+    _ = io:setopts(standard_io, [{encoding, utf8}]),
+
     Options = [{includes, [IncludeDir]},
                {location, {1,1}}],
 
