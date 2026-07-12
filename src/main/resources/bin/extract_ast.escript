@@ -6,7 +6,7 @@ main([Filename, IncludeDir]) ->
 
     case epp:parse_file(Filename, Options) of
         {ok, Forms} ->
-            io:format("~s~n", [to_json(Forms)]);
+            io:format("~ts~n", [to_json(Forms)]);
         {error, Error} ->
             io:format(standard_error, "Error parsing file: ~p~n", [Error]),
             halt(1)
