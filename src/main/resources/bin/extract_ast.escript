@@ -19,6 +19,10 @@ main([Filename, IncludeDir]) ->
 % Only recent Erlang versions (OTP 27+) have the json module,
 % and I don't want to introduce external dependencies either,
 % so here's an encoder just complete enough for the Erlang Abstract Format
+% Special case: flatten list
+to_json({cons, Anno, Head, Tail}) ->
+    {Elements, LastTail} = flatten_cons(Tail, [Head]),
+    to_json_array([flat_cons, Anno, Elements, LastTail]);
 to_json(Atom) when is_atom(Atom) ->
     % Make atoms into string
     "\"" ++ escape_string(atom_to_list(Atom)) ++ "\"";
@@ -43,6 +47,12 @@ is_string([H|_] = List) when is_integer(H) ->
     io_lib:printable_list(List);
 is_string(_) -> 
     false. % Empty list[] or list of tuples returns false and becomes a JSON array[]
+
+% Flatten nested cons cells into flat array and tail
+flatten_cons({cons, _Anno, Head, NextTail}, Acc) ->
+    flatten_cons(NextTail, [Head | Acc]);
+flatten_cons(LastTail, Acc) ->
+    {lists:reverse(Acc), LastTail}.
 
 % Escape special characters in strings
 escape_string(Str) ->

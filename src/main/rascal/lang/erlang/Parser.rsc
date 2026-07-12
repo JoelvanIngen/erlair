@@ -95,6 +95,8 @@ Pattern parsePattern(["match", value \anno, list[value] lhs, list[value] rhs])
     = Pattern::match(parseAnno(\anno), parsePattern(lhs), parsePattern(rhs));
 Pattern parsePattern(["cons", value \anno, list[value] head, list[value] tail])
     = Pattern::cons(parseAnno(\anno), parsePattern(head), parsePattern(tail));
+Pattern parsePattern(["flat_cons", value \anno, list[value] elements, value tail])
+    = rebuildPatternCons(parseAnno(\anno), [parsePattern(e) | e <- elements], parsePattern(tail));
 Pattern parsePattern(["map", value \anno, list[list[value]] associations])
     = Pattern::\map(parseAnno(\anno), [parseAssociation(a) | a <- associations]);
 Pattern parsePattern(["nil", value \anno])
@@ -113,6 +115,11 @@ Pattern parsePattern(["var", value \anno, str name])
     = Pattern::var(parseAnno(\anno), name);
 default Pattern parsePattern(value v) = unrecognised(#Pattern, v);
 
+Pattern rebuildPatternCons(Annotation \anno, [Pattern head, *Pattern tailElements], Pattern tail)
+    = Pattern::cons(\anno, head, rebuildPatternCons(\anno, tailElements, tail));
+Pattern rebuildPatternCons(Annotation \anno, [], Pattern tail)
+    = tail;
+
 Expression parseExpr([str t, value \anno, value v])
     = Expression::literal(parseLiteral([t, \anno, v]))
     when t in LITERAL_TAGS;
@@ -128,6 +135,8 @@ Expression parseExpr(["catch", value \anno, list[value] expr])
     = \catch(parseAnno(\anno), parseExpr(expr));
 Expression parseExpr(["cons", value \anno, list[value] head, list[value] tail])
     = Expression::cons(parseAnno(\anno), parseExpr(head), parseExpr(tail));
+Expression parseExpr(["flat_cons", value \anno, list[value] elements, value tail])
+    = rebuildExprCons(parseAnno(\anno), [parseExpr(e) | e <- elements], parseExpr(tail));
 Expression parseExpr(["fun", value \anno, ["function", str name, int arity]])
     = funDecl(parseAnno(\anno), name, arity);
 Expression parseExpr(["fun", value \anno, ["function", list[value] \module, list[value] name, list[value] arity]])
@@ -185,6 +194,11 @@ Expression parseExpr(["try", value \anno, list[list[value]] body, list[list[valu
 Expression parseExpr(["var", value \anno, str name])
     = Expression::var(parseAnno(\anno), name);
 default Expression parseExpr(value v) = unrecognised(#Expression, v);
+
+Expression rebuildExprCons(Annotation \anno, [Expression head, *Expression tailElements], Expression tail)
+    = cons(\anno, head, rebuildExprCons(\anno, tailElements, tail));
+Expression rebuildExprCons(Annotation \anno, [], Expression tail)
+    = tail;
 
 Qualifier parseQualifier(["zip", value \anno, list[list[value]] generators])
     = zip(parseAnno(\anno), [parseQualifier(q) | q <- generators]);
