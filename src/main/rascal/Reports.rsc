@@ -1,4 +1,4 @@
-module examples::Analyses
+module Reports
 
 import IO;
 import List;
@@ -15,12 +15,12 @@ str reportDeadFunctions(M3 model) {
     dead = findDeadFunctions(model);
     res = "";
     if (isEmpty(dead)) {
-        res += "No dead functions found.";
+        res += "No dead functions found.\n";
     } else {
-        res += "Found <size(dead)> dead function(s):";
+        res += "Found <size(dead)> dead function(s):\n";
         for (f <- dead) {
             loc physLoc = getOneFrom(model.declarations[f]);
-            res += " - <f.path> at <physLoc>";
+            res += " - <f.path> at <physLoc>\n";
         }
     }
     return res;
@@ -32,12 +32,12 @@ str reportUnusedRecordsAndFields(M3 model) {
     // Unused Records
     unusedRecords = findUnusedRecords(model);
     if (isEmpty(unusedRecords)) {
-        res += "No unused records found.";
+        res += "No unused records found.\n";
     } else {
-        res += "Found <size(unusedRecords)> unused record(s):";
+        res += "Found <size(unusedRecords)> unused record(s):\n";
         for (r <- unusedRecords) {
             loc physLoc = getOneFrom(model.declarations[r]);
-            res += " - Record <r.path> at <physLoc>";
+            res += " - Record <r.path> at <physLoc>\n";
         }
     }
 
@@ -46,12 +46,12 @@ str reportUnusedRecordsAndFields(M3 model) {
     // Unused Fields in Used Records
     unusedFields = findUnusedFieldsOfUsedRecords(model);
     if (isEmpty(unusedFields)) {
-        res += "No unused fields found in active records.";
+        res += "No unused fields found in active records.\n";
     } else {
-        res += "Found <size(unusedFields)> unused field(s) within active records:";
+        res += "Found <size(unusedFields)> unused field(s) within active records:\n";
         for (f <- unusedFields) {
             loc physLoc = getOneFrom(model.declarations[f]);
-            res += " - Field <f.path> at <physLoc>";
+            res += " - Field <f.path> at <physLoc>\n";
         }
     }
 
@@ -62,14 +62,14 @@ str reportUnusedVariables(M3 model) {
     unused = findUnusedVariables(model);
     res = "";
     if (isEmpty(unused)) {
-        res += "No unused variables found.";
+        res += "No unused variables found.\n";
     } else {
-        res += "Found <size(unused)> unused variable(s):";
+        res += "Found <size(unused)> unused variable(s):\n";
         for (v <- unused) {
             loc physLoc = getOneFrom(model.declarations[v]);
             parts = [ p | p <- split("/", v.path), p != "" ];
             str varName = size(parts) > 0 ? parts[size(parts)-1] : v.path;
-            res += " - Variable \'<varName>\' at <physLoc>";
+            res += "- Variable \'<varName>\' at <physLoc>\n";
         }
     }
     return res;
@@ -79,11 +79,11 @@ str reportDeadClauses(EAF ast) {
     dead = findDeadClauses(ast);
     str res = "";
     if (isEmpty(dead)) {
-        res += "No dead clauses found.";
+        res += "No dead clauses found.\n";
     } else {
-        res += "Found <size(dead)> dead clause(s):";
+        res += "Found <size(dead)> dead clause(s):\n";
         for (d <- dead) {
-            res += "\n - Dead clause at <d>";
+            res += "- Dead clause at <d>\n";
         }
     }
     return res;
