@@ -70,7 +70,7 @@ void createReport(loc rootFolder) {
  * Parses single file and returns report
  */
 str loop(loc file) {
-    EAF ast = parseErlangAST(getAstJSON(file, file.parent));
+    EAF ast = parseErlangAST(getAstJSON(file, findBestIncludeDir(file)));
     return createReport(
         file,
         ast,
