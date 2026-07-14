@@ -41,8 +41,6 @@ str reportUnusedRecordsAndFields(M3 model) {
         }
     }
 
-    println();
-
     // Unused Fields in Used Records
     unusedFields = findUnusedFieldsOfUsedRecords(model);
     if (isEmpty(unusedFields)) {
