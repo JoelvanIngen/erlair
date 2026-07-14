@@ -53,11 +53,11 @@ void createReport(loc rootFolder) {
     <update, finish> = progressBar(nFiles, prefix="Processing:");
     for (i <- [0..nFiles]) {
         file = files[i];
-        update("<i>/<nFiles>: <file>");
+        update("<i>/<nFiles>: <file>                                 ");
         try {
             appendToFile(reportFn, loop(file) + "\n\n");
         } catch value e: {
-            println("Error processing <file>: <e>");
+            println("Error processing <file>: <e>                                   ");
             nFailures += 1;
         }
     }
