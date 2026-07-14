@@ -8,6 +8,46 @@ import lang::erlang::Parser;
 
 set[str] EXTENSIONS = {"erl", "escript"};
 
+// Recursively walks up from the file to find the best project include
+// Works some of the time
+// Definitely better than nothing
+loc findBestIncludeDir(loc file) {
+    loc current = file.parent;
+    // Avoid infinite loops
+    while (current.path != "/" && current.path != "") {
+        // If we find an 'apps' or 'lib' directory, probably best include root
+        if (exists(current + "apps") && isDirectory(current + "apps")) {
+            return current + "apps";
+        }
+        if (exists(current + "lib") && isDirectory(current + "lib")) {
+            return current + "lib";
+        }
+        current = current.parent;
+    }
+
+    current = file.parent;
+    // Avoid infinite loops
+    while (current.path != "/" && current.path != "") {
+        // If we find a rebar.config or standard configuration file, 
+        // the sibling 'include' or the root itself might work
+        if (exists(current + "rebar.config") || exists(current + "erlang.mk")) {
+            if (exists(current + "include") && isDirectory(current + "include")) {
+                return current + "include";
+            }
+            return current;
+        }
+        current = current.parent;
+    }
+    
+    // Fall back to the sibling 'include' folder if it exists, otherwise the parent
+    loc siblingInclude = file.parent.parent + "include";
+    if (exists(siblingInclude) && isDirectory(siblingInclude)) {
+        return siblingInclude;
+    }
+    
+    return file.parent;
+}
+
 // Recursively scans a folder and finds all Erlang source and script files
 list[loc] findErlangFiles(loc dir) {
     list[loc] files = [];
