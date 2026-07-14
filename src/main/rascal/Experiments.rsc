@@ -56,10 +56,10 @@ void createReport(loc rootFolder) {
 
     nFailures = 0;
 
-    // <update, finish> = progressBar(nFiles, prefix="Processing:");
+    <update, finish> = progressBar(nFiles, prefix="Processing:");
     for (i <- [0..nFiles]) {
         file = files[i];
-        // update("<i>/<nFiles>: <file>");
+        update("<i>/<nFiles>: <file>");
         try {
             appendToFile(reportFn, loop(file) + "\n\n");
         } catch value e: {
@@ -67,7 +67,7 @@ void createReport(loc rootFolder) {
             nFailures += 1;
         }
     }
-    // finish();
+    finish();
 
     if (nFailures > 0) println("\nFailed files: <nFailures>.\n");
 }
