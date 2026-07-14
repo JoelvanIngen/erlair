@@ -39,12 +39,6 @@ str createReport(loc fileLoc, EAF ast, M3 model) {
 }
 
 /**
- * Creates report for multiple files when asts and models have already been generated
- */
-str createReport(list[loc] fileLocs, list[EAF] asts, list[M3] models)
-    = intercalate("\n\n", [ report(fileLocs[i], asts[i], models[i]) | i <- [0..size(fileLocs)] ]);
-
-/**
  * Creates report for multiple files when asts and models have not yet been generated
  */
 void createReport(loc rootFolder) {
