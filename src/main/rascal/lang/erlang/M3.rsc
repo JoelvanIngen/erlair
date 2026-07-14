@@ -56,6 +56,93 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         model.names += {<name, physLoc>};
     }
 
+    /**
+     * Traverses and resolves identifiers within patterns that are parsed as expressions
+     * Some pattern-constructs such as map patters are parsed using Expression nodes
+     * This function ensres that any Expression::var nodes occurring within
+     * Pattern-like context are treated as declarations and added to environment
+     * instead of Expression use, but to make sure that sub-expressions are treated
+     * as Expression uses
+     */
+    Env analysePatternScope(value n, loc scopeLoc, Env currentEnv) {
+        top-down-break visit(n) {
+            // Treat expression variables in a pattern context as declarations
+            case Expression::var(Annotation a, str name): {
+                if (name != "_") {
+                    loc physLoc = annoToLoc(fileLoc, a);
+                    if (name notin currentEnv) {
+                        loc varLoc = scopeLoc[scheme="erlang+variable"][path="<scopeLoc.path>/<name>"];
+                        model.declarations += {<varLoc, physLoc>};
+                        model.containment += {<scopeLoc, varLoc>};
+                        currentEnv[name] = varLoc;
+                    } else {
+                        model.uses += {<physLoc, currentEnv[name]>};
+                    }
+                }
+            }
+            case Pattern::var(Annotation a, str name): {
+                if (name != "_") {
+                    loc physLoc = annoToLoc(fileLoc, a);
+                    if (name notin currentEnv) {
+                        loc varLoc = scopeLoc[scheme="erlang+variable"][path="<scopeLoc.path>/<name>"];
+                        model.declarations += {<varLoc, physLoc>};
+                        model.containment += {<scopeLoc, varLoc>};
+                        currentEnv[name] = varLoc;
+                    } else {
+                        model.uses += {<physLoc, currentEnv[name]>};
+                    }
+                }
+            }
+            // Recursively handle nested map patterns
+            case Pattern::\map(_, list[Association] associations): {
+                for (\assoc <- associations) {
+                    currentEnv = analyseScope(\assoc.key, scopeLoc, currentEnv);  // Keys are always uses
+                    currentEnv = analysePatternScope(\assoc.\value, scopeLoc, currentEnv);  // Values are patterns
+                }
+            }
+            case Expression::\map(_, list[Association] associations): {
+                for (\assoc <- associations) {
+                    currentEnv = analyseScope(\assoc.key, scopeLoc, currentEnv);
+                    currentEnv = analysePatternScope(\assoc.\value, scopeLoc, currentEnv);
+                }
+            }
+            // Handle binary element patterns
+            case binElementExpr(_, Expression val, OptSize size, _): {
+                currentEnv = analysePatternScope(val, scopeLoc, currentEnv);
+                if (size(Expression expr) := size) {
+                    currentEnv = analyseScope(expr, scopeLoc, currentEnv);  // Size is a use
+                }
+            }
+            case binElementPatt(_, Pattern val, OptSize size, _): {
+                currentEnv = analysePatternScope(val, scopeLoc, currentEnv);
+                if (size(Expression expr) := size) {
+                    currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                }
+            }
+            // Handle record fields matching inside map values
+            case Expression::record(Annotation a, str name, list[RecordFieldExpr] fields): {
+                registerRecordUse(a, name);
+                for (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) <- fields) {
+                    registerFieldUse(fa, name, fn);
+                }
+                for (f <- fields) {
+                    currentEnv = analysePatternScope(f.\value, scopeLoc, currentEnv);
+                }
+            }
+            case Expression::recordUpdate(Annotation a, Expression expr, str name, list[RecordFieldExpr] fields): {
+                registerRecordUse(a, name);
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+                for (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) <- fields) {
+                    registerFieldUse(fa, name, fn);
+                }
+                for (f <- fields) {
+                    currentEnv = analysePatternScope(f.\value, scopeLoc, currentEnv);
+                }
+            }
+        }
+        return currentEnv;
+    }
+
     // Traverses nested Type nodes
     void analyseType(Type t) {
         top-down visit(t) {
@@ -458,6 +545,14 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                     registerCall(a, |unresolved:///dynamic_call|, scopeLoc);
                 }
                 currentEnv = analyseScope([modExpr, funExpr, args], scopeLoc, currentEnv);
+            }
+
+            // Map
+            case Pattern::\map(_, list[Association] associations): {
+                for (\assoc <- associations) {
+                    currentEnv = analyseScope(\assoc.key, scopeLoc, currentEnv);  // Expression uses
+                    currentEnv = analysePatternScope(\assoc.\value, scopeLoc, currentEnv);  // Pattern declarations
+                }
             }
         }
 
