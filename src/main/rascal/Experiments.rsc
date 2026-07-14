@@ -3,6 +3,7 @@ module Experiments
 import DateTime;
 import IO;
 import List;
+import Message;
 import Reports;
 import String;
 import lang::erlang::AST;
@@ -19,6 +20,7 @@ loc REPORT_ROOT = |project://erlair/src/main/output/report/|;
  */
 str createReport(loc fileLoc, EAF ast, M3 model) {
     res = "#######\nReport for file <fileLoc>\n#######\n";
+    res += formatParseErrors(model);
     
     res += "Dead Functions:\n";
     res += reportDeadFunctions(model);
@@ -81,4 +83,14 @@ str loop(loc file) {
 str getReportFileName() {
     datetime dt = now();
     return "<dt.year><dt.month><dt.day>-<dt.hour><dt.minute><dt.second>";
+}
+
+/**
+ * Detects whether any pre-processor errors occurred, and
+ * extends the report entry with a warning if so
+ */
+str formatParseErrors(M3 model) {
+    errors = [ m | m <- model.messages, Message::\error(_, _) := m ];
+    if (isEmpty(errors)) return "";
+    return "WARNING: PRE-PROCESSOR ERRORS IN FILE; RESULTS MAY NOT BE ACCURATE\n"; 
 }
