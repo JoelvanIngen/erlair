@@ -434,8 +434,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 currentEnv = analyseScope(fields, scopeLoc, currentEnv);
             }
             // Record field access
-            case Expression::recordField(Annotation a, _, str name, Expression field): {
+            case Expression::recordField(Annotation a, Expression expr, str name, Expression field): {
                 registerRecordUse(a, name);
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
                 if (Expression::literal(atom(Annotation fa, str fn)) := field) {
                     registerFieldUse(fa, name, fn);
                 }
@@ -450,8 +451,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 currentEnv = analyseScope(field, scopeLoc, currentEnv);
             }
             // Record update
-            case Expression::recordUpdate(Annotation a, _, str name, list[RecordFieldExpr] fields): {
+            case Expression::recordUpdate(Annotation a, Expression expr, str name, list[RecordFieldExpr] fields): {
                 registerRecordUse(a, name);
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
                 for (recordFieldExpr(Annotation fa, Expression::literal(atom(_, str fn)), _) <- fields) {
                     registerFieldUse(fa, name, fn);
                 }

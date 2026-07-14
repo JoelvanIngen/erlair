@@ -2,6 +2,10 @@
 
 -compile(export_all).
 
+-record(user_info, {
+    is_superuser
+}).
+
 start() ->
     W = 5,  % Used variable
     X = 0,  % Another used variable
@@ -20,3 +24,7 @@ cast(_Msg, _Req) ->
 
 % All of this should be unused (3 variables)
 stream_body_2(Msg, Req=#{pid := Pid}) -> ok.
+
+% None of this should be unused
+update_user_record(UserInfoRecord, [{is_superuser, IsSuperuser} | Rest]) ->
+    update_user_record(UserInfoRecord#user_info{is_superuser = IsSuperuser}, Rest).
