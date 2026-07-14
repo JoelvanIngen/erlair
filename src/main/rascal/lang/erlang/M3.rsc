@@ -5,6 +5,7 @@ extend analysis::m3::TypeSymbol;
 
 import List;
 import Message;
+import String;
 import util::Math;
 import lang::erlang::AST;
 
