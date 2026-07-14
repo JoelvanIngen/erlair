@@ -556,6 +556,26 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                     currentEnv = analysePatternScope(\assoc.\value, scopeLoc, currentEnv);  // Pattern declarations
                 }
             }
+
+            // Local function reference (`fun Name/Arity`)
+            case funDecl(Annotation a, str name, int arity): {
+                loc callee = resolveLocalCallee(name, arity);
+                registerCall(a, callee, scopeLoc);
+            }
+            // Remote function reference (`fun Mod:Name/Arity`)
+            case funDecl(Annotation a, Expression modExpr, Expression funExpr, Expression arityExpr): {
+                if (Expression::literal(atom(_, str targetMod)) := modExpr, 
+                    Expression::literal(atom(_, str funName)) := funExpr, 
+                    Expression::literal(integer(_, str arityStr)) := arityExpr) {
+                    
+                    int arity = toInt(arityStr);
+                    loc callee = |erlang+function:///<targetMod>/<funName>/<toString(arity)>|;
+                    registerCall(a, callee, scopeLoc);
+                } else {
+                    registerCall(a, |unresolved:///dynamic_call|, scopeLoc);
+                }
+                currentEnv = analyseScope([modExpr, funExpr, arityExpr], scopeLoc, currentEnv);
+            }
         }
 
         return currentEnv;

@@ -8,7 +8,8 @@
 
 %% Exported function
 start() ->
-    active_private_1().
+    active_private_1(),
+    fun pointed_at/0.
 
 %% Another export to test multiple exports
 active_entry(X) ->
@@ -34,6 +35,9 @@ transitively_active_private() ->
 %% Directly called by active_entry/1
 active_private_2(X) ->
     X + 1.
+
+%% Pointed at by other function
+pointed_at() -> ok.
 
 
 %% ====================================================================
