@@ -30,7 +30,6 @@ list[loc] findBestIncludeDirs(loc file) {
             dirs += libInclude;
         }
 
-        
         if (existsDirectory(localInclude)) {
             dirs += localInclude;
         }
