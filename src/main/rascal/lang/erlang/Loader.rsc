@@ -20,7 +20,7 @@ list[loc] findBestIncludeDirs(loc file) {
     while (current.path != "/" && current.path != "") {
         appsInclude = current + "apps";
         libInclude = current + "lib";
-        loc localInclude = current + "include";
+        localInclude = current + "include";
 
         if (existsDirectory(appsInclude)) {
             dirs += appsInclude;
