@@ -2,50 +2,57 @@ module lang::erlang::Loader
 
 import IO;
 import List;
+import Set;
 import lang::erlang::AST;
 import lang::erlang::ParseFile;
 import lang::erlang::Parser;
 
 set[str] EXTENSIONS = {"erl", "escript"};
 
-// Recursively walks up from the file to find the best project include
-// Works some of the time
-// Definitely better than nothing
-loc findBestIncludeDir(loc file) {
-    loc current = file.parent;
-    // Avoid infinite loops
-    while (current.path != "/" && current.path != "") {
-        // If we find an 'apps' or 'lib' directory, probably best include root
-        if (exists(current + "apps") && isDirectory(current + "apps")) {
-            return current + "apps";
-        }
-        if (exists(current + "lib") && isDirectory(current + "lib")) {
-            return current + "lib";
-        }
-        current = current.parent;
-    }
+bool existsDirectory(loc f) = exists(f) && isDirectory(f);
 
-    current = file.parent;
+// Recursively walks up from the file to find the project include directories
+list[loc] findBestIncludeDirs(loc file) {
+    list[loc] dirs = [];
+    loc current = file.parent;
+
     // Avoid infinite loops
     while (current.path != "/" && current.path != "") {
-        // If we find a rebar.config or standard configuration file, 
-        // the sibling 'include' or the root itself might work
-        if (exists(current + "rebar.config") || exists(current + "erlang.mk")) {
-            if (exists(current + "include") && isDirectory(current + "include")) {
-                return current + "include";
-            }
-            return current;
+        appsInclude = current + "apps";
+        libInclude = current + "lib";
+        loc localInclude = current + "include";
+
+        if (existsDirectory(appsInclude)) {
+            dirs += appsInclude;
         }
+
+        if (existsDirectory(libInclude)) {
+            dirs += libInclude;
+        }
+
+        
+        if (existsDirectory(localInclude)) {
+            dirs += localInclude;
+        }
+
+        if (exists(current + "rebar.config") || exists(current + "erlang.mk")) {
+            dirs += current;
+        }
+
         current = current.parent;
     }
     
-    // Fall back to the sibling 'include' folder if it exists, otherwise the parent
+    // Explicitly add sibling include folder if exists
     loc siblingInclude = file.parent.parent + "include";
     if (exists(siblingInclude) && isDirectory(siblingInclude)) {
-        return siblingInclude;
+        dirs += siblingInclude;
     }
-    
-    return file.parent;
+
+    // Always add file's parent directory
+    dirs += file.parent;
+
+    // Deduplication time
+    return toList(toSet(dirs));
 }
 
 // Recursively scans a folder and finds all Erlang source and script files
@@ -61,7 +68,7 @@ list[loc] findErlangFiles(loc dir) {
     return files;
 }
 
-list[EAF] loadProjectASTs(loc rootFolder, loc includeDir = |unknown:///|) {
+list[EAF] loadProjectASTs(loc rootFolder, list[loc] includeDirs = [|unknown:///|]) {
     list[loc] sources = findErlangFiles(rootFolder);
     list[EAF] projectASTs = [];
 
@@ -71,8 +78,8 @@ list[EAF] loadProjectASTs(loc rootFolder, loc includeDir = |unknown:///|) {
     for (loc file <- sources) {
         i += 1;
         try {
-            loc currentInclude = (includeDir == |unknown:///|) ? file.parent : includeDir;
-            str rawAst = getAstJSON(file, currentInclude);
+            list[loc] currentIncludes = (includeDirs == [|unknown:///|]) ? findBestIncludeDirs(file) : includeDirs;
+            str rawAst = getAstJSON(file, currentIncludes);
             projectASTs += [parseErlangAST(rawAst)];
             // println("<i>/<nTotal> :: Parsed: <rootFolder + file.path>");
         } catch value e: {
