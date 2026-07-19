@@ -8,6 +8,7 @@ import Message;
 import String;
 import util::Math;
 import lang::erlang::AST;
+import lang::erlang::Bifs;
 
 // Used to keep track of visible variables in nested scopes
 private alias Env = map[str, loc];
@@ -38,6 +39,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     M3 model = m3(fileLoc);
 
     model.languages = { erlang() };
+    model.implicitDeclarations = getImplicitDeclarations();
 
     str currentModName = "unknown";
     loc currentModule = |erlang+module:///unknown|;
@@ -149,6 +151,10 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         top-down visit(t) {
             case userType(Annotation a, str typeName, list[Type] args): {
                 loc typeLoc = |erlang+type:///<currentModName>/<typeName>/<toString(size(args))>|;
+                model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
+            }
+            case predefinedType(Annotation a, str typeName, list[Type] args): {
+                loc typeLoc = |erlang+type:///<typeName>/<toString(size(args))>|;
                 model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
             }
             case remoteType(Annotation a, Type \module, Type name, list[Type] args): {
@@ -346,6 +352,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         if (identifier in importedFunctions) {
             str \module = importedFunctions[identifier];
             return |erlang+function:///<\module>/<funName>/<toString(arity)>|;
+        }
+        if (identifier in AUTO_IMPORTED_BIFS) {
+            return |erlang+function:///<funName>/<toString(arity)>|;
         }
         return |erlang+unresolved:///|;
     }
@@ -600,6 +609,17 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     }
 
     return model;
+}
+
+set[loc] getImplicitDeclarations() {
+    set[loc] implicits = {};
+    for (<name, arity> <- AUTO_IMPORTED_BIFS) {
+        implicits += |erlang+function:///<name>/<toString(arity)>|;
+    }
+    for (<name, arity> <- AUTO_IMPORTED_TYPES) {
+        implicits += |erlang+type:///<name>/<toString(arity)>|;
+    }
+    return implicits;
 }
 
 /**
