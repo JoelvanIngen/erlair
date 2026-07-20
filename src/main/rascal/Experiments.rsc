@@ -36,6 +36,10 @@ str createReport(loc fileLoc, EAF ast, M3 model) {
 
     res += "Unreachable Clauses:\n";
     res += reportDeadClauses(ast);
+    res += "\n";
+
+    res += "Cyclic Type Definitions:\n";
+    res += reportCyclicTypes(ast);
     
     return res;
 }
