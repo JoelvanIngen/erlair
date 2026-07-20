@@ -39,7 +39,7 @@ str createReport(loc fileLoc, EAF ast, M3 model) {
     res += "\n";
 
     res += "Cyclic Type Definitions:\n";
-    res += reportCyclicTypes(ast);
+    res += reportCyclicTypes(model);
     
     return res;
 }
