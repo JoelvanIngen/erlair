@@ -6,6 +6,7 @@ import Set;
 import String;
 import lang::erlang::AST;
 import lang::erlang::M3;
+import lang::erlang::analysis::CyclicTypeAnalyser;
 import lang::erlang::analysis::DeadClauseAnalyser;
 import lang::erlang::analysis::DeadFunctionAnalyser;
 import lang::erlang::analysis::UnusedRecordAnalyser;
@@ -82,6 +83,20 @@ str reportDeadClauses(EAF ast) {
         res += "Found <size(dead)> dead clause(s):\n";
         for (d <- dead) {
             res += "- Dead clause at <d>\n";
+        }
+    }
+    return res;
+}
+
+str reportCyclicTypes(M3 model) {
+    cyclic = findCyclicTypes(model);
+    str res = "";
+    if (isEmpty(cyclic)) {
+        res += "No cyclic type definitions found.\n";
+    } else {
+        res += "Found <size(cyclic)> cyclic type definition(s):\n";
+        for (c <- cyclic) {
+            res += "- Cyclic definition at <c>\n";
         }
     }
     return res;
