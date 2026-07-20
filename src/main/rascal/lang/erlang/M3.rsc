@@ -14,7 +14,8 @@ import lang::erlang::Bifs;
 private alias Env = map[str, loc];
 
 data M3(
-    rel[loc caller, loc callee] functionCalls = {}
+    rel[loc caller, loc callee] functionCalls = {},
+    rel[loc from, loc to] typeDependencies = {}  // `from` is defined type, `to` is the type it depends on
 );
 
 data Language = erlang(str version = "");
@@ -147,21 +148,33 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     }
 
     // Traverses nested Type nodes
-    void analyseType(Type t) {
+    void analyseType(Type t, loc fromDecl) {
         top-down visit(t) {
             case userType(Annotation a, str typeName, list[Type] args): {
                 loc typeLoc = |erlang+type:///<currentModName>/<typeName>/<toString(size(args))>|;
                 model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
+
+                if (fromDecl.scheme == "erlang+type") {
+                    model.typeDependencies += {<fromDecl, typeLoc>};
+                }
             }
             case predefinedType(Annotation a, str typeName, list[Type] args): {
                 loc typeLoc = |erlang+type:///<typeName>/<toString(size(args))>|;
                 model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
+
+                if (fromDecl.scheme == "erlang+type") {
+                    model.typeDependencies += {<fromDecl, typeLoc>};
+                }
             }
             case remoteType(Annotation a, Type \module, Type name, list[Type] args): {
                 if (Type::literal(atom(_, str moduleName)) := \module
                     , Type::literal(atom(_, str typeName)) := name) {
                     loc typeLoc = |erlang+type:///<moduleName>/<typeName>/<toString(size(args))>|;
                     model.uses += {<annoToLoc(fileLoc, a), typeLoc>};
+
+                    if (fromDecl.scheme == "erlang+type") {
+                        model.typeDependencies += {<fromDecl, typeLoc>};
+                    }
                 }
             }
             case record(_, list[Type] fields): {
@@ -214,11 +227,11 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                         case recordField(Annotation fa, Expression fe, _): { fieldAnno = fa; fieldExpr = fe; }
                         case typedRecordField(Annotation fa, Expression fe, Type t): { 
                             fieldAnno = fa; fieldExpr = fe; 
-                            analyseType(t);
+                            analyseType(t, currentModule);
                         }
                         case typedRecordField(Annotation fa, Expression fe, _, Type t): { 
                             fieldAnno = fa; fieldExpr = fe; 
-                            analyseType(t);
+                            analyseType(t, currentModule);
                         }
                         default: throw "M3: Unexpected recordField <rf>";
                     }
@@ -246,9 +259,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.names += {<name, physLoc>};
                 model.types += {<typeLoc, erlangType(\type)>};
 
-                analyseType(\type);
+                analyseType(\type, typeLoc);
                 for (Type v <- vars) {
-                    analyseType(v);
+                    analyseType(v, typeLoc);
                 }
             }
 
@@ -262,9 +275,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.names += {<name, physLoc>};
                 model.types += {<typeLoc, erlangType(\type)>};
 
-                analyseType(\type);
+                analyseType(\type, typeLoc);
                 for (Type v <- vars) {
-                    analyseType(v);
+                    analyseType(v, typeLoc);
                 }
             }
 
@@ -274,7 +287,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
 
                 for (Type s <- signatures) {
-                    analyseType(s);
+                    analyseType(s, funcLoc);
                 }
             }
 
@@ -284,7 +297,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
 
                 for (Type s <- signatures) {
-                    analyseType(s);
+                    analyseType(s, funcLoc);
                 }
             }
 
@@ -294,7 +307,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 model.types += {<funcLoc, erlangType(s)> | s <- signatures};
 
                 for (Type s <- signatures) {
-                    analyseType(s);
+                    analyseType(s, funcLoc);
                 }
             }
 
