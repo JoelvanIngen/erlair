@@ -9,10 +9,8 @@ set[loc] findCyclicTypes(M3 model) {
     
     // model.typeDependencies+ computes the transitive closure
     // If <T, T> is in the closure, T is cyclic
-    for (<T, _> <- model.typeDependencies+) {
-        if (<T, T> in model.typeDependencies+) {
-            cyclic += { T };
-        }
+    for (<T, T> <- model.typeDependencies+) {
+        cyclic += { T };
     }
     
     return cyclic;
