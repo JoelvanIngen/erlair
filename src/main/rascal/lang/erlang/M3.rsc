@@ -451,24 +451,22 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         return -1;
     }
 
+    // Walks up a path and returns the first scope appearing in the `declarations` field
+    loc nearestDeclaration(loc \start) {
+        current = \start;
+        while (current.path != "" && current.path != "/") {
+            if (current in model.declarations<0>) {
+                return current;
+            }
+            current = current.parent;
+        }
+        return \start;
+    }
+
     // Register spawn relation from encusing function to entrypoint
     void registerSpawn(loc entryPoint, loc scopeLoc) {
         if (scopeLoc.scheme != "unknown") {
-            loc current = scopeLoc;
-            // Resolve a known path to prevent unknown locs in reports
-            while (current.path != "" && current.path != "/") {
-                if (current in model.declarations<0>) {
-                    model.processSpawns += {<current, entryPoint>};
-                    return;
-                }
-                loc p = current.parent;
-                if (p == current) {
-                    break;
-                }
-                current = p;
-            }
-            // Fallback
-            model.processSpawns += {<scopeLoc, entryPoint>};
+            model.processSpawns += {<nearestDeclaration(scopeLoc), entryPoint>};
         }
     }
 
