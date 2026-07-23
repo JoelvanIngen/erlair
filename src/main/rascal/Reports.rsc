@@ -119,3 +119,28 @@ str reportProcessSpawns(M3 model) {
     }
     return res;
 }
+
+str reportMessageSends(M3 model) {
+    sends = model.messageSends;
+    res = "";
+    if (isEmpty(sends)) {
+        res += "No message sends to registered processes found.\n";
+    } else {
+        res += "Found <size(sends)> message send(s) to registered processes:\n";
+        for (<caller, target> <- sends) {
+            loc physLoc = |unknown:///|;
+            if (caller in model.declarations<0>) {
+                physLoc = getOneFrom(model.declarations[caller]);
+            }
+            
+            // Clean up registration URI path
+            str targetName = target.path;
+            if (startsWith(targetName, "/")) {
+                targetName = substring(targetName, 1);
+            }
+            
+            res += " - <caller.path> at <physLoc> sends to registered process \'<targetName>\'\n";
+        }
+    }
+    return res;
+}
