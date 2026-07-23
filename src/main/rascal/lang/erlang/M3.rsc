@@ -13,9 +13,16 @@ import lang::erlang::Bifs;
 // Used to keep track of visible variables in nested scopes
 private alias Env = map[str, loc];
 
+// BIFs that spawn new processes
+set[str] SPAWN_FUNCS = {
+    "spawn", "spawn_link", "spawn_monitor",
+    "spawn_opt", "spawn_request", "spawn_request_abandon"
+};
+
 data M3(
     rel[loc caller, loc callee] functionCalls = {},
-    rel[loc from, loc to] typeDependencies = {}  // `from` is defined type, `to` is the type it depends on
+    rel[loc from, loc to] typeDependencies = {},  // `from` is defined type, `to` is the type it depends on
+    rel[loc caller, loc entryPoint] processSpawns = {}  // `caller`: function that calls a process, `entryPoint`: the function the spawned process starts at
 );
 
 data Language = erlang(str version = "");
@@ -372,6 +379,85 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         return |erlang+unresolved:///|;
     }
 
+    // Tries to resolve entry point of spawn call by its arguments
+    loc resolveSpawnEntryPoint(str spawnName, list[Expression] args) {
+        int arity = size(args);
+
+        // Function: spawn(Fun), spawn_link(Fun), spawn_monitor(Fun)
+        if ((spawnName == "spawn" || spawnName == "spawn_link" || spawnName == "spawn_monitor") && arity == 1) {
+            return resolveFunArg(args[0]);
+        }
+        // Function with options: spawn_opt(Fun, Opts), spawn_request(Fun, Opts)
+        if ((spawnName == "spawn_opt" || spawnName == "spawn_request") && arity == 2) {
+            return resolveFunArg(args[0]);
+        }
+
+        // Module, function, arity: spawn(M, F, A), spawn_link(M, F, A), spawn_monitor(M, F, A)
+        if ((spawnName == "spawn" || spawnName == "spawn_link" || spawnName == "spawn_monitor") && arity == 3) {
+            return resolveMFA(args[0], args[1], args[2]);
+        }
+        // MFA with options: spawn_opt(M, F, A, Opts), spawn_request(M, F, A, Opts)
+        if ((spawnName == "spawn_opt" || spawnName == "spawn_request") && arity == 4) {
+            return resolveMFA(args[0], args[1], args[2]);
+        }
+
+        // Node, module, function, arity: spawn(Node, M, F, A), spawn_link(Node, M, F, A), spawn_monitor(Node, M, F, A)
+        if ((spawnName == "spawn" || spawnName == "spawn_link" || spawnName == "spawn_monitor") && arity == 4) {
+            return resolveMFA(args[1], args[2], args[3]);
+        }
+        // NMFA with options: spawn_opt(Node, M, F, A, Opts), spawn_request(Node, M, F, A, Opts)
+        if ((spawnName == "spawn_opt" || spawnName == "spawn_request") && arity == 5) {
+            return resolveMFA(args[1], args[2], args[3]);
+        }
+
+        return |unresolved:///dynamic_spawn|;
+    }
+
+    // Resolve entry point from a `fun ...` expression argument
+    loc resolveFunArg(Expression funExpr) {
+        // fun Mod:Name/Arity
+        if (funDecl(_, Expression modExpr, Expression nameExpr, Expression arityExpr) := funExpr,
+            Expression::literal(atom(_, str modName)) := modExpr,
+            Expression::literal(atom(_, str funName)) := nameExpr,
+            Expression::literal(integer(_, str arityStr)) := arityExpr) {
+            return |erlang+function:///<modName>/<funName>/<arityStr>|;
+        }
+        // fun Name/Arity handle with local resolver
+        if (funDecl(_, str funName, int arity) := funExpr) {
+            return resolveLocalCallee(funName, arity);
+        }
+        // Anonymous function
+        return |erlang+anonymous:///|;
+    }
+
+    // Resolve an entry point from Module, Function, Args arguments
+    loc resolveMFA(Expression modExpr, Expression funExpr, Expression argsExpr) {
+        if (Expression::literal(atom(_, str modName)) := modExpr,
+            Expression::literal(atom(_, str funName)) := funExpr) {
+
+            int arity = countListLiteralArity(argsExpr);
+            if (arity >= 0) {
+                return |erlang+function:///<modName>/<funName>/<toString(arity)>|;
+            }
+        }
+        return |unresolved:///dynamic_spawn|;
+    }
+
+    int countListLiteralArity(Expression e) {
+        if (Expression::nil(Annotation _) := e) return 0;
+        if (Expression::cons(Annotation _, _, Expression tail) := e) {
+            return 1 + countListLiteralArity(tail);
+        }
+        return -1;
+    }
+
+    // Register spawn relation from encusing function to entrypoint
+    void registerSpawn(loc entryPoint, loc scopeLoc) {
+        if (scopeLoc.scheme != "unknown") {
+            model.processSpawns += {<scopeLoc, entryPoint>};
+        }
+    }
+
     void registerCall(Annotation a, loc callee, loc scopeLoc) {
         loc physLoc = annoToLoc(fileLoc, a);
         model.uses += {<physLoc, callee>};
@@ -557,6 +643,11 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 if (Expression::literal(atom(_, str funName)) := funExpr || Expression::var(_, str funName) := funExpr) {
                     loc callee = resolveLocalCallee(funName, size(args));
                     registerCall(a, callee, scopeLoc);
+
+                    if (funName in SPAWN_FUNCS) {
+                        loc entryPoint = resolveSpawnEntryPoint(funName, args);
+                        registerSpawn(entryPoint, scopeLoc);
+                    }
                 }
                 currentEnv = analyseScope([funExpr, args], scopeLoc, currentEnv);
             }
@@ -566,6 +657,12 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 if (Expression::literal(atom(_, str targetMod)) := modExpr, Expression::literal(atom(_, str funName)) := funExpr) {
                     loc callee = |erlang+function:///<targetMod>/<funName>/<toString(size(args))>|;
                     registerCall(a, callee, scopeLoc);
+
+                    // Handle redundant `erlang` module on BIFs
+                    if (targetMod == "erlang" && funName in SPAWN_FUNCS) {
+                        loc entryPoint = resolveSpawnEntryPoint(funName, args);
+                        registerSpawn(entryPoint, scopeLoc);
+                    }
                 } else {
                     registerCall(a, |unresolved:///dynamic_call|, scopeLoc);
                 }
