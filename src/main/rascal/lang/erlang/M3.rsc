@@ -454,6 +454,20 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     // Register spawn relation from encusing function to entrypoint
     void registerSpawn(loc entryPoint, loc scopeLoc) {
         if (scopeLoc.scheme != "unknown") {
+            loc current = scopeLoc;
+            // Resolve a known path to prevent unknown locs in reports
+            while (current.path != "" && current.path != "/") {
+                if (current in model.declarations<0>) {
+                    model.processSpawns += {<current, entryPoint>};
+                    return;
+                }
+                loc p = current.parent;
+                if (p == current) {
+                    break;
+                }
+                current = p;
+            }
+            // Fallback
             model.processSpawns += {<scopeLoc, entryPoint>};
         }
     }

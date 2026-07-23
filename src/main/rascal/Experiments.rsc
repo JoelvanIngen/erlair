@@ -40,6 +40,10 @@ str createReport(loc fileLoc, EAF ast, M3 model) {
 
     res += "Cyclic Type Definitions:\n";
     res += reportCyclicTypes(model);
+    res += "\n";
+
+    res += "Process Spawns:\n";
+    res += reportProcessSpawns(model);
     
     return res;
 }
