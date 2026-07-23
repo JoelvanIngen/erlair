@@ -44,6 +44,10 @@ str createReport(loc fileLoc, EAF ast, M3 model) {
 
     res += "Process Spawns:\n";
     res += reportProcessSpawns(model);
+    res += "\n";
+
+    res += "Message Sends:\n";
+    res += reportMessageSends(model);
     
     return res;
 }

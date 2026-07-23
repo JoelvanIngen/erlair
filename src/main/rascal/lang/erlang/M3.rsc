@@ -22,7 +22,8 @@ set[str] SPAWN_FUNCS = {
 data M3(
     rel[loc caller, loc callee] functionCalls = {},
     rel[loc from, loc to] typeDependencies = {},  // `from` is defined type, `to` is the type it depends on
-    rel[loc caller, loc entryPoint] processSpawns = {}  // `caller`: function that calls a process, `entryPoint`: the function the spawned process starts at
+    rel[loc caller, loc entryPoint] processSpawns = {},  // `caller`: function that calls a process, `entryPoint`: the function the spawned process starts at
+    rel[loc caller, loc name] messageSends = {} // `caller`: containing scope, `name`: process target
 );
 
 data Language = erlang(str version = "");
@@ -615,6 +616,18 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
             }
             case mGenerateStrict(_, Association association, Expression expr): {
                 currentEnv = analyseMGen(association, expr, scopeLoc, currentEnv);
+            }
+
+            // Message sends (operator "!")
+            case Expression::op(_, "!", Expression lhs, Expression rhs): {
+                if (Expression::literal(atom(_, str regName)) := lhs) {
+                    loc registeredLoc = |erlang+registered:///<regName>|;
+                    if (scopeLoc.scheme != "unknown") {
+                        model.messageSends += {<nearestDeclaration(scopeLoc), registeredLoc>};
+                    }
+                }
+                currentEnv = analyseScope(lhs, scopeLoc, currentEnv);
+                currentEnv = analyseScope(rhs, scopeLoc, currentEnv);
             }
 
             // Vars
