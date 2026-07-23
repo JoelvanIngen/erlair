@@ -101,3 +101,21 @@ str reportCyclicTypes(M3 model) {
     }
     return res;
 }
+
+str reportProcessSpawns(M3 model) {
+    spawns = model.processSpawns;  // Linter complains, not sure why because it runs perfectly fine
+    res = "";
+    if (isEmpty(spawns)) {
+        res += "No process spawns found.\n";
+    } else {
+        res += "Found <size(spawns)> process spawn(s):\n";
+        for (<caller, entryPoint> <- spawns) {
+            loc physLoc = |unknown:///|;
+            if (caller in model.declarations<0>) {
+                physLoc = getOneFrom(model.declarations[caller]);
+            }
+            res += " - <caller.path> at <physLoc> spawns <entryPoint>\n";
+        }
+    }
+    return res;
+}
