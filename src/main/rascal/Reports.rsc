@@ -9,6 +9,7 @@ import lang::erlang::M3;
 import lang::erlang::analysis::CyclicTypeAnalyser;
 import lang::erlang::analysis::DeadClauseAnalyser;
 import lang::erlang::analysis::DeadFunctionAnalyser;
+import lang::erlang::analysis::MissingSpecAnalyser;
 import lang::erlang::analysis::UnusedRecordAnalyser;
 import lang::erlang::analysis::UnusedVariableAnalyser;
 
@@ -140,6 +141,20 @@ str reportMessageSends(M3 model) {
             }
             
             res += " - <caller.path> at <physLoc> sends to registered process \'<targetName>\'\n";
+        }
+    }
+    return res;
+}
+
+str reportMissingSpecs(M3 model) {
+    missingSpecs = findMissingSpecs(model);
+    str res = "";
+    if (isEmpty(missingSpecs)) {
+        res += "No public functions with missing specs found.\n";
+    } else {
+        res += "Found <size(missingSpecs)> public function(s) with missing specs:\n";
+        for (m <- missingSpecs) {
+            res += "- Missing spec at at <m>\n";
         }
     }
     return res;
