@@ -10,6 +10,7 @@ import lang::erlang::analysis::CyclicTypeAnalyser;
 import lang::erlang::analysis::DeadClauseAnalyser;
 import lang::erlang::analysis::DeadFunctionAnalyser;
 import lang::erlang::analysis::MissingSpecAnalyser;
+import lang::erlang::analysis::NamingConventionsAnalyser;
 import lang::erlang::analysis::ShadowedBifsAnalyser;
 import lang::erlang::analysis::UnusedRecordAnalyser;
 import lang::erlang::analysis::UnusedVariableAnalyser;
@@ -170,6 +171,20 @@ str reportShadowedBifs(M3 model) {
         res += "Found <size(shadowedBifs)> shadowed BIF(s):\n";
         for (m <- shadowedBifs) {
             res += "- Shadowed BIF at <m>\n";
+        }
+    }
+    return res;
+}
+
+str reportNonIdiomaticNames(M3 model) {
+    badNames = findNonIdiomaticNames(model);
+    str res = "";
+    if (isEmpty(badNames)) {
+        res += "No non-idiomatic names found.\n";
+    } else {
+        res += "Found <size(badNames)> non-idiomatic name(s):\n";
+        for (n <- badNames) {
+            res += "- Non-idiomatic name at <n>\n";
         }
     }
     return res;
