@@ -48,6 +48,10 @@ str createReport(loc fileLoc, EAF ast, M3 model) {
 
     res += "Message Sends:\n";
     res += reportMessageSends(model);
+    res += "\n";
+
+    res += "Public functions without specs:\n";
+    res += reportMissingSpecs(model);
     
     return res;
 }
