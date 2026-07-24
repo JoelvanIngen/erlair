@@ -52,6 +52,10 @@ str createReport(loc fileLoc, EAF ast, M3 model) {
 
     res += "Public functions without specs:\n";
     res += reportMissingSpecs(model);
+    res += "\n";
+
+    res += "Shadowed BIFs:\n";
+    res += reportShadowedBifs(model);
     
     return res;
 }

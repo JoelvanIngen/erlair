@@ -10,6 +10,7 @@ import lang::erlang::analysis::CyclicTypeAnalyser;
 import lang::erlang::analysis::DeadClauseAnalyser;
 import lang::erlang::analysis::DeadFunctionAnalyser;
 import lang::erlang::analysis::MissingSpecAnalyser;
+import lang::erlang::analysis::ShadowedBifsAnalyser;
 import lang::erlang::analysis::UnusedRecordAnalyser;
 import lang::erlang::analysis::UnusedVariableAnalyser;
 
@@ -155,6 +156,20 @@ str reportMissingSpecs(M3 model) {
         res += "Found <size(missingSpecs)> public function(s) with missing specs:\n";
         for (m <- missingSpecs) {
             res += "- Missing spec at at <m>\n";
+        }
+    }
+    return res;
+}
+
+str reportShadowedBifs(M3 model) {
+    shadowedBifs = findShadowedBifs(model);
+    str res = "";
+    if (isEmpty(shadowedBifs)) {
+        res += "No shadowed BIFs found.\n";
+    } else {
+        res += "Found <size(shadowedBifs)> shadowed BIF(s):\n";
+        for (m <- shadowedBifs) {
+            res += "- Shadowed BIF at <m>\n";
         }
     }
     return res;
