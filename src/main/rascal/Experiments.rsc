@@ -56,6 +56,10 @@ str createReport(loc fileLoc, EAF ast, M3 model) {
 
     res += "Shadowed BIFs:\n";
     res += reportShadowedBifs(model);
+    res += "\n";
+
+    res += "Non-idiomatic names:\n";
+    res += reportNonIdiomaticNames(model);
     
     return res;
 }
