@@ -170,3 +170,18 @@ test_comprehension_scope(List) ->
 % Unused variable: UnusedInComp (1 variable)
 test_comprehension_unused(List) ->
     [ Item || Item <- List, UnusedInComp = true ].
+
+% Guards
+% None of this should be unused
+test_guard_usage(X, Y) when X > Y -> X.
+
+% Bitstrings
+% None of this should be unused
+test_bitstring_size_dep(<<Size:8, Data:Size/binary>>) ->
+    Data.
+
+% Chain variables
+% Unused 1 variable
+test_chained_match(Input) ->
+    UsedChainVar = UnusedChainVar = Input,
+    UsedChainVar.
