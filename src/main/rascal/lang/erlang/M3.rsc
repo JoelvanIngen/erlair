@@ -604,6 +604,20 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 currentEnv = branchEnv + tEnv;
             }
 
+            case \try(_, Body body, list[Clause] caseClauses, list[Clause] catchClauses, Body afterBody): {
+                currentEnv = analyseScope(body, scopeLoc, currentEnv);
+                Env branchEnv = currentEnv;
+                for (clause(_, patterns, guards, clauseBody) <- caseClauses + catchClauses) {
+                    Env clauseEnv = currentEnv;
+                    clauseEnv = analyseScope(patterns, scopeLoc, clauseEnv);
+                    clauseEnv = analyseScope(guards, scopeLoc, clauseEnv);
+                    clauseEnv = analyseScope(clauseBody, scopeLoc, clauseEnv);
+                    branchEnv += clauseEnv;
+                }
+                currentEnv = branchEnv;
+                currentEnv = analyseScope(afterBody, scopeLoc, currentEnv);
+            }
+
             // Record instantiation
             case Expression::record(Annotation a, str name, list[RecordFieldExpr] fields): {
                 registerRecordUse(a, name);
