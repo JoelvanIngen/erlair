@@ -535,18 +535,6 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                 currentEnv = analyseScope(pat, scopeLoc, currentEnv);
             }
 
-            // Maybe has its own scope
-            case maybe(_, Body body): {
-                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("maybe")>"];
-                analyseScope(body, innerScope, currentEnv);
-            }
-            case maybe(_, Body body, _, list[Clause] elseClauses): {
-                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("maybe")>"];
-                analyseScope(body, innerScope, currentEnv);
-                for (c <- elseClauses)
-                    analyseScope(c, innerScope, currentEnv);
-            }
-
             case \case(_, Expression expr, list[Clause] clauses): {
                 currentEnv = analyseScope(expr, scopeLoc, currentEnv);
 
