@@ -547,6 +547,25 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
                     analyseScope(c, innerScope, currentEnv);
             }
 
+            case \case(_, Expression expr, list[Clause] clauses): {
+                currentEnv = analyseScope(expr, scopeLoc, currentEnv);
+
+                // Accumulate changes
+                Env branchEnv = currentEnv;
+
+                for (clause(_, patterns, guards, body) <- clauses) {
+                    // New env for each parallel clause to avoid contamination
+                    Env clauseEnv = currentEnv;
+                    clauseEnv = analyseScope(patterns, scopeLoc, clauseEnv);
+                    clauseEnv = analyseScope(guards, scopeLoc, clauseEnv);
+                    clauseEnv = analyseScope(body, scopeLoc, clauseEnv);
+
+                    branchEnv += clauseEnv;
+                }
+
+                currentEnv = branchEnv;
+            }
+
             // Record instantiation
             case Expression::record(Annotation a, str name, list[RecordFieldExpr] fields): {
                 registerRecordUse(a, name);
