@@ -568,8 +568,9 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
 
             case \if(_, list[Clause] clauses): {
                 Env branchEnv = currentEnv;
-                for (clause(_, patterns, guards, body) <- clauses) {
+                for (clause(_, _, guards, body) <- clauses) {
                     Env clauseEnv = currentEnv;
+                    // If statement has no patterns
                     clauseEnv = analyseScope(guards, scopeLoc, clauseEnv);
                     clauseEnv = analyseScope(body, scopeLoc, clauseEnv);
                     branchEnv += clauseEnv;
