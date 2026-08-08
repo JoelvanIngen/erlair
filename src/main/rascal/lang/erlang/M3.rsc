@@ -330,11 +330,13 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     }
 
     // To ensure unique identifiers for all anonymous scopes
-    int scopeIdCounter = 0;
+    map[tuple[loc parentLoc, str prefix], int] scopeCounters = ();
 
-    str getNextScopeId(str prefix) {
-        scopeIdCounter += 1;
-        return "<prefix>_<scopeIdCounter>";
+    str getNextScopeId(loc parentLoc, str prefix) {
+        tuple[loc, str] key = <parentLoc, prefix>;
+        int count = (key in scopeCounters ? scopeCounters[key] : -1) + 1;
+        scopeCounters[key] = count;
+        return "<prefix>_<count>";
     }
 
     void registerRecordUse(Annotation a, str name) {
@@ -360,7 +362,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
     }
 
     void analyseComprehension(str prefix, list[Qualifier] qualifiers, node head, loc scopeLoc, Env env) {
-        loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId(prefix)>"];
+        loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId(scopeLoc, prefix)>"];
         env = analyseScope(qualifiers, innerScope, env);
         analyseScope(head, innerScope, env);
     }
@@ -486,7 +488,7 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         top-down-break visit(n) {
             // Function clauses
             case clause(_, list[Pattern] patterns, GuardSeq guards, Body body): {
-                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("clause")>"];
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId(scopeLoc, "clause")>"];
                 innerEnv = currentEnv;
                 innerEnv = analyseScope(patterns, innerScope, innerEnv);
                 innerEnv = analyseScope(guards, innerScope, innerEnv);
@@ -495,13 +497,13 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
 
             // Anonymous functions
             case fun(_, list[Clause] clauses): {
-                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("fun")>"];
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId(scopeLoc, "fun")>"];
                 for (Clause c <- clauses) {
                     analyseScope(c, innerScope, currentEnv);
                 }
             }
             case namedFun(Annotation a, str name, list[Clause] clauses): {
-                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId("named_fun")>"];
+                loc innerScope = scopeLoc[path="<scopeLoc.path>/<getNextScopeId(scopeLoc, "named_fun")>"];
 
                 loc nameLoc = innerScope[scheme="erlang+variable"][path="<innerScope.path>/<name>"];
                 loc physLoc = annoToLoc(fileLoc, a);
@@ -798,7 +800,10 @@ M3 extractErlangM3(loc fileLoc, EAF ast) {
         else if (<funcLoc, \public()> notin model.modifiers)
             model.modifiers += {<funcLoc, \private()>};
 
-        for (Clause c <- clauses) 
+        // Reset scope counters
+        scopeCounters = ();
+
+        for (Clause c <- clauses)
             analyseScope(c, funcLoc, ());
     }
 
